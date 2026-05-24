@@ -76,15 +76,19 @@ Optional APB-lite-style wrapper with a 12-bit APB address space. It forwards
 `0x000`-`0x0ff` to `tinynpu_apb_wrapper` and implements descriptor registers at
 `0x100`-`0x11f`.
 
-The v20 descriptor start behavior runs a small DMA-control FSM skeleton:
+The v21 descriptor start behavior runs a small DMA-control FSM:
 
 ```text
 IDLE -> LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C -> DONE
 ```
 
-`LOAD_A`, `LOAD_B`, and `STORE_C` are placeholder timing states. `START_CORE`
-and `WAIT_CORE` drive the wrapped tinyNPU core through the internal APB path. No
-real DMA data mover exists yet.
+`LOAD_A` and `LOAD_B` read words from a simple abstract external memory port and
+write A/B values into the wrapped core. `START_CORE` and `WAIT_CORE` drive the
+wrapped tinyNPU core through the internal APB path. `STORE_C` reads C results
+from the core and writes them back through the abstract memory port.
+
+The memory port is word-addressed, single-beat, ready/valid, and not AXI. It has
+no bursts, byte strobes, outstanding transactions, or error response.
 
 Status: synthesizable.
 
@@ -118,10 +122,9 @@ Targets:
 
 ## Not Implemented Yet
 
-- Real DMA data mover RTL.
 - AXI/AHB memory master.
 - Burst transfers.
-- Descriptor-driven hardware memory movement.
+- Byte strobes, memory error handling, and descriptor interrupts.
 - Interrupt output.
 - SRAM macro integration.
 - Technology-mapped timing/PPA.

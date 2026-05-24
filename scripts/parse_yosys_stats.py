@@ -64,7 +64,7 @@ def main():
     top_module = sys.argv[6] if len(sys.argv) == 7 else "tinynpu_top"
     notes = "Generic Yosys synthesis only; not technology-mapped PPA."
     if top_module == "tinynpu_dma_descriptor_wrapper":
-        notes = "Generic Yosys synthesis only; includes descriptor registers, DMA-control FSM skeleton, and wrapped tinyNPU core, but no real DMA data mover."
+        notes = "Generic Yosys synthesis only; includes descriptor registers, DMA FSM, abstract external memory port, and wrapped tinyNPU core; no AXI, bursts, or outstanding transactions."
 
     summary_json = {
         "status": "passed",

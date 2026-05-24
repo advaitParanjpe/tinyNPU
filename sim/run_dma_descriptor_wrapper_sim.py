@@ -19,8 +19,11 @@ TEST_NAMES = (
     "desc_invalid_access",
     "forwarded_core_identity",
     "forwarded_core_invalid_unaligned",
-    "desc_fsm_core_launch",
-    "desc_core_window_blocked_while_busy",
+    "desc_dma_identity",
+    "desc_dma_mixed_signed",
+    "desc_dma_back_to_back",
+    "desc_dma_core_window_blocked_while_busy",
+    "desc_dma_memory_unchanged",
 )
 
 FSM_STATES = (
@@ -49,13 +52,19 @@ def write_summary(status, tests_passed=0, passed_names=None, notes=None):
         "mac_variant": "row4",
         "descriptor_registers_synthesizable": True,
         "dma_fsm": True,
-        "real_dma_rtl": False,
-        "real_memory_movement": False,
+        "abstract_memory_port": True,
+        "real_dma_rtl": True,
+        "real_memory_movement": True,
+        "axi": False,
         "fsm_states": list(FSM_STATES),
-        "core_launch_verified": "desc_fsm_core_launch" in (passed_names or []),
+        "core_launch_verified": "desc_dma_identity" in (passed_names or []),
+        "memory_movement_verified": (
+            "desc_dma_identity" in (passed_names or [])
+            and "desc_dma_mixed_signed" in (passed_names or [])
+        ),
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
-        "notes": notes or "Descriptor registers and DMA-control FSM skeleton are synthesizable; real memory movement DMA is not implemented yet",
+        "notes": notes or "Uses simple abstract ready/valid memory port; not AXI",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     BUILD_DIR.mkdir(parents=True, exist_ok=True)

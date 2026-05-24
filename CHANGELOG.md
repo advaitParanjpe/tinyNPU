@@ -1,5 +1,16 @@
 # Changelog
 
+## v21
+
+- Added a simple word-addressed ready/valid external memory port to
+  `tinynpu_dma_descriptor_wrapper`.
+- Updated the descriptor-wrapper FSM so `LOAD_A`, `LOAD_B`, and `STORE_C`
+  perform real data movement through the abstract memory port.
+- Added descriptor-wrapper tests for end-to-end external memory to A/B
+  scratchpads to core compute to external memory C store-back.
+- Kept AXI, bursts, outstanding transactions, and memory error responses out of
+  scope.
+
 ## v20
 
 - Replaced descriptor-wrapper status-only start behavior with a synthesizable

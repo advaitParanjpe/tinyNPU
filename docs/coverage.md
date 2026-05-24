@@ -43,13 +43,15 @@ path, number of passed coverage categories, and known gap count.
 - Variant regression: `serial`, `row4`, and `full16` through `make compare`.
 - APB DMA-style descriptor-flow smoke tests through `make sim-apb-dma`.
 - Synthesizable DMA descriptor-wrapper smoke tests through `make sim-dma-desc`,
-  including `desc_fsm_start_done`, `desc_fsm_core_launch`, and
-  `desc_core_window_blocked_while_busy`.
+  including `desc_fsm_start_done`, `desc_dma_identity`,
+  `desc_dma_mixed_signed`, `desc_dma_back_to_back`,
+  `desc_dma_core_window_blocked_while_busy`, and
+  `desc_dma_memory_unchanged`.
 
 ## Known Gaps
 
 - No full AXI/APB protocol coverage yet.
-- No real DMA data-mover coverage yet.
+- No AXI/AHB DMA protocol coverage yet.
 - No SRAM macro or memory timing coverage yet.
 - No formal proof yet.
 - Only fixed 4x4 matrix size currently tested.

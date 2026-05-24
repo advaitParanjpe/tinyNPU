@@ -19,7 +19,9 @@ then the descriptor model performs the movement sequence:
 
 These descriptor registers are testbench-side model state only. The repo also
 has an optional synthesizable DMA descriptor wrapper, documented in
-`docs/dma_descriptor_wrapper.md`, but that wrapper does not move memory.
+`docs/dma_descriptor_wrapper.md`, which moves data through a simple abstract
+ready/valid memory port. The model in this file remains testbench-only and is
+kept as a higher-level software-flow smoke test.
 
 ## Descriptor Register Map
 
@@ -74,9 +76,8 @@ Outputs are written under `build/sim/apb_dma/`, including:
 
 ## Limitations
 
-- No real DMA controller RTL.
-- No real DMA data mover RTL.
 - No AXI master.
+- No AXI/AHB protocol, bursts, arbitration, or descriptor interrupts.
 - No burst transactions.
 - No bus arbitration.
 - No interrupts.

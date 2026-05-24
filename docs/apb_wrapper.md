@@ -48,8 +48,8 @@ read data.
 ## Current Limitations
 
 - Focused APB wrapper testbench only; not full APB protocol coverage.
-- A DMA descriptor wrapper exists, but it implements descriptor/status
-  registers only, not DMA memory movement.
+- A DMA descriptor wrapper exists with descriptor/status registers and an
+  abstract ready/valid memory port. It is still not AXI.
 - No APB error signaling yet.
 - No APB protection, strobe, or byte-lane support.
 - No AXI, real DMA, SRAM macro, or SoC interconnect integration.

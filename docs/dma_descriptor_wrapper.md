@@ -4,9 +4,27 @@
 wrapper that adds software-visible DMA descriptor registers around the existing
 `tinynpu_apb_wrapper` core interface.
 
-This is not a real DMA data mover yet. The wrapper stores descriptor registers
-and runs a small DMA-control FSM skeleton that can launch the wrapped tinyNPU
-core.
+The wrapper stores descriptor registers and runs a small DMA-control FSM that
+uses a simple abstract external memory port to load A/B data, launch the wrapped
+tinyNPU core, and store C results. This is still not AXI and does not support
+bursts or outstanding memory transactions.
+
+## External Memory Port
+
+The v21 wrapper adds this single-beat ready/valid memory port:
+
+| Signal | Direction | Description |
+| --- | --- | --- |
+| `mem_valid` | output | memory transaction request |
+| `mem_we` | output | `0` read, `1` write |
+| `mem_addr[31:0]` | output | external memory word address |
+| `mem_wdata[31:0]` | output | write data for stores |
+| `mem_rdata[31:0]` | input | read data for loads |
+| `mem_ready` | input | transaction accepted/data valid |
+
+For reads, `mem_rdata` is sampled when `mem_valid && mem_ready`. For writes,
+`mem_wdata` is accepted when `mem_valid && mem_ready`. There are no byte
+strobes, bursts, outstanding transactions, or memory error responses.
 
 ## Address Map
 
@@ -40,8 +58,11 @@ When software writes `DMA_CTRL.start` while idle, the wrapper starts this FSM:
 IDLE -> LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C -> DONE
 ```
 
-`LOAD_A`, `LOAD_B`, and `STORE_C` are placeholder timing states only. They do
-not read or write external memory.
+`LOAD_A` reads 16 words starting at `DMA_A_EXT_BASE` and writes each
+`mem_rdata[7:0]` value into the tinyNPU A scratchpad. `LOAD_B` does the same for
+`DMA_B_EXT_BASE` and the B scratchpad. `STORE_C` reads 16 signed int32 C result
+words from the core and writes them to external memory starting at
+`DMA_C_EXT_BASE`.
 
 `START_CORE` issues an internal APB write to the wrapped core CTRL register.
 `WAIT_CORE` issues internal APB reads to the wrapped core STATUS register until
@@ -70,11 +91,12 @@ Descriptor-register accesses are ready in the APB access phase.
   performs simulated memory movement.
 - The DMA descriptor wrapper is synthesizable RTL in
   `tinynpu_dma_descriptor_wrapper`.
-- The DMA descriptor wrapper still does not implement real DMA memory movement.
+- The DMA descriptor wrapper performs real movement over its abstract memory
+  port, but it is not an AXI/AHB DMA engine.
 
 ## Future Path
 
-- Connect `DMA_CTRL.start` to a real DMA FSM.
-- Add a memory bus master for A/B load and C store-back.
+- Replace the abstract memory port with a real SoC memory bus master.
 - Add interrupt/status/error handling.
-- Add burst transfers and memory latency/backpressure tests.
+- Add burst transfers, byte strobes, memory error responses, and richer
+  backpressure tests.

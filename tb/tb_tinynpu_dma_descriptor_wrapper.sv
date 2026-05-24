@@ -26,6 +26,22 @@ module tb_tinynpu_dma_descriptor_wrapper;
   logic [31:0] prdata;
   logic        pready;
   logic        pslverr;
+  logic        mem_valid;
+  logic        mem_we;
+  logic [31:0] mem_addr;
+  logic [31:0] mem_wdata;
+  logic [31:0] mem_rdata;
+  logic        mem_ready;
+
+  localparam int EXT_MEM_WORDS = 256;
+  localparam int EXT_A0_BASE = 0;
+  localparam int EXT_B0_BASE = 32;
+  localparam int EXT_C0_BASE = 64;
+  localparam int EXT_A1_BASE = 96;
+  localparam int EXT_B1_BASE = 128;
+  localparam int EXT_C1_BASE = 160;
+
+  logic [31:0] ext_mem [0:EXT_MEM_WORDS-1];
 
   int failures;
   int tests_passed;
@@ -40,8 +56,23 @@ module tb_tinynpu_dma_descriptor_wrapper;
     .pwdata  (pwdata),
     .prdata  (prdata),
     .pready  (pready),
-    .pslverr (pslverr)
+    .pslverr (pslverr),
+    .mem_valid (mem_valid),
+    .mem_we    (mem_we),
+    .mem_addr  (mem_addr),
+    .mem_wdata (mem_wdata),
+    .mem_rdata (mem_rdata),
+    .mem_ready (mem_ready)
   );
+
+  assign mem_ready = 1'b1;
+  assign mem_rdata = (mem_addr < EXT_MEM_WORDS) ? ext_mem[mem_addr[7:0]] : 32'h0;
+
+  always_ff @(posedge pclk) begin
+    if (mem_valid && mem_we && mem_ready && (mem_addr < EXT_MEM_WORDS)) begin
+      ext_mem[mem_addr[7:0]] <= mem_wdata;
+    end
+  end
 
   initial begin
     pclk = 1'b0;
@@ -53,6 +84,117 @@ module tb_tinynpu_dma_descriptor_wrapper;
       pack_i8 = {{24{value[7]}}, value[7:0]};
     end
   endfunction
+
+  function automatic int mixed_a(input int idx);
+    begin
+      case (idx)
+        0: mixed_a = 3;    1: mixed_a = -2;   2: mixed_a = 7;    3: mixed_a = 1;
+        4: mixed_a = -5;   5: mixed_a = 4;    6: mixed_a = 0;    7: mixed_a = 6;
+        8: mixed_a = 9;    9: mixed_a = -8;   10: mixed_a = 2;   11: mixed_a = -1;
+        12: mixed_a = 1;   13: mixed_a = 3;   14: mixed_a = -4;  15: mixed_a = 5;
+        default: mixed_a = 0;
+      endcase
+    end
+  endfunction
+
+  function automatic int mixed_b(input int idx);
+    begin
+      case (idx)
+        0: mixed_b = -1;   1: mixed_b = 2;    2: mixed_b = 0;    3: mixed_b = 5;
+        4: mixed_b = 6;    5: mixed_b = -3;   6: mixed_b = 4;    7: mixed_b = 1;
+        8: mixed_b = 2;    9: mixed_b = 7;    10: mixed_b = -6;  11: mixed_b = 3;
+        12: mixed_b = 0;   13: mixed_b = -2;  14: mixed_b = 8;   15: mixed_b = -4;
+        default: mixed_b = 0;
+      endcase
+    end
+  endfunction
+
+  function automatic int signed ext_i8(input int word_addr);
+    begin
+      ext_i8 = $signed(ext_mem[word_addr][7:0]);
+    end
+  endfunction
+
+  function automatic int signed expected_c(input int a_base, input int b_base, input int elem_idx);
+    int row;
+    int col;
+    int k;
+    int signed sum;
+    begin
+      row = elem_idx / MATRIX_N;
+      col = elem_idx % MATRIX_N;
+      sum = 0;
+      for (k = 0; k < MATRIX_N; k = k + 1) begin
+        sum = sum + (ext_i8(a_base + (row * MATRIX_N) + k) *
+                     ext_i8(b_base + (k * MATRIX_N) + col));
+      end
+      expected_c = sum;
+    end
+  endfunction
+
+  task automatic clear_ext_mem(input logic [31:0] value);
+    int i;
+    begin
+      for (i = 0; i < EXT_MEM_WORDS; i = i + 1) begin
+        ext_mem[i] = value;
+      end
+    end
+  endtask
+
+  task automatic fill_identity_case(input int a_base, input int b_base);
+    int i;
+    begin
+      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
+        ext_mem[a_base + i] = pack_i8(0);
+        ext_mem[b_base + i] = pack_i8(i + 1);
+      end
+      for (i = 0; i < MATRIX_N; i = i + 1) begin
+        ext_mem[a_base + (i * MATRIX_N) + i] = pack_i8(1);
+      end
+    end
+  endtask
+
+  task automatic fill_mixed_case(input int a_base, input int b_base);
+    int i;
+    begin
+      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
+        ext_mem[a_base + i] = pack_i8(mixed_a(i));
+        ext_mem[b_base + i] = pack_i8(mixed_b(i));
+      end
+    end
+  endtask
+
+  task automatic start_dma(input int a_base, input int b_base, input int c_base);
+    begin
+      apb_write(DMA_A_EXT_BASE, a_base);
+      apb_write(DMA_B_EXT_BASE, b_base);
+      apb_write(DMA_C_EXT_BASE, c_base);
+      apb_write(DMA_CTRL, 32'h1);
+    end
+  endtask
+
+  task automatic clear_dma_done;
+    begin
+      apb_write(DMA_CTRL, 32'h2);
+    end
+  endtask
+
+  task automatic check_ext_c(input string test_name, input int a_base, input int b_base, input int c_base, output int local_failures);
+    int i;
+    int signed expected;
+    int signed got;
+    begin
+      local_failures = 0;
+      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
+        expected = expected_c(a_base, b_base, i);
+        got = $signed(ext_mem[c_base + i]);
+        if (got !== expected) begin
+          $display("FAIL %s: C[%0d] expected %0d actual %0d", test_name, i, expected, got);
+          local_failures = local_failures + 1;
+        end
+      end
+    end
+  endtask
 
   task automatic apb_write(input logic [11:0] addr, input logic [31:0] data);
     begin
@@ -234,72 +376,145 @@ module tb_tinynpu_dma_descriptor_wrapper;
     end
   endtask
 
-  task automatic run_desc_fsm_core_launch;
+  task automatic run_desc_dma_identity;
     int local_failures;
     int c_failures;
-    logic [31:0] status;
     begin
       local_failures = 0;
-      apb_write(ADDR_CTRL, 32'h2);
-      load_core_identity();
-
-      apb_write(DMA_CTRL, 32'h1);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
       wait_desc_done();
 
-      apb_read(ADDR_STATUS, status);
-      if (status[1] !== 1'b1) begin
-        $display("FAIL desc_fsm_core_launch: core done not set status=0x%08x", status);
-        local_failures = local_failures + 1;
-      end
-
-      check_core_identity("desc_fsm_core_launch", c_failures);
+      check_ext_c("desc_dma_identity", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
       local_failures = local_failures + c_failures;
 
       if (local_failures == 0) begin
         tests_passed = tests_passed + 1;
-        $display("PASS desc_fsm_core_launch");
+        $display("PASS desc_dma_identity");
       end else begin
         failures = failures + local_failures;
       end
-      apb_write(DMA_CTRL, 32'h2);
+      clear_dma_done();
     end
   endtask
 
-  task automatic run_desc_core_window_blocked_while_busy;
+  task automatic run_desc_dma_mixed_signed;
+    int local_failures;
+    int c_failures;
+    begin
+      local_failures = 0;
+      clear_ext_mem(32'h0);
+      fill_mixed_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done();
+
+      check_ext_c("desc_dma_mixed_signed", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_mixed_signed");
+      end else begin
+        failures = failures + local_failures;
+      end
+      clear_dma_done();
+    end
+  endtask
+
+  task automatic run_desc_dma_back_to_back;
+    int local_failures;
+    int c_failures;
+    begin
+      local_failures = 0;
+      clear_ext_mem(32'h0);
+
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done();
+      check_ext_c("desc_dma_back_to_back_first", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+      clear_dma_done();
+
+      fill_mixed_case(EXT_A1_BASE, EXT_B1_BASE);
+      start_dma(EXT_A1_BASE, EXT_B1_BASE, EXT_C1_BASE);
+      wait_desc_done();
+      check_ext_c("desc_dma_back_to_back_second", EXT_A1_BASE, EXT_B1_BASE, EXT_C1_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_back_to_back");
+      end else begin
+        failures = failures + local_failures;
+      end
+      clear_dma_done();
+    end
+  endtask
+
+  task automatic run_desc_dma_core_window_blocked_while_busy;
     int local_failures;
     logic [31:0] data;
     logic [31:0] status;
     begin
       local_failures = 0;
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
       apb_write(ADDR_A_BASE, pack_i8(5));
-      apb_write(DMA_CTRL, 32'h1);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
       apb_read(DMA_STATUS, status);
       if (status[0] !== 1'b1) begin
-        $display("FAIL desc_core_window_blocked_while_busy: busy not set status=0x%08x", status);
+        $display("FAIL desc_dma_core_window_blocked_while_busy: busy not set status=0x%08x", status);
         local_failures = local_failures + 1;
       end
 
       apb_write(ADDR_A_BASE, pack_i8(99));
       apb_read(ADDR_A_BASE, data);
       if (data !== 32'h0) begin
-        $display("FAIL desc_core_window_blocked_while_busy: busy core read returned 0x%08x", data);
+        $display("FAIL desc_dma_core_window_blocked_while_busy: busy core read returned 0x%08x", data);
         local_failures = local_failures + 1;
       end
 
       wait_desc_done();
-      apb_read(ADDR_A_BASE, data);
-      if (data !== pack_i8(5)) begin
-        $display("FAIL desc_core_window_blocked_while_busy: busy write was not ignored, A0=0x%08x", data);
-        local_failures = local_failures + 1;
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_core_window_blocked_while_busy");
+      end else begin
+        failures = failures + local_failures;
+      end
+      clear_dma_done();
+    end
+  endtask
+
+  task automatic run_desc_dma_memory_unchanged;
+    int local_failures;
+    int i;
+    bit in_used_region;
+    begin
+      local_failures = 0;
+      clear_ext_mem(32'h5a5a_a5a5);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done();
+
+      for (i = 0; i < EXT_MEM_WORDS; i = i + 1) begin
+        in_used_region = ((i >= EXT_A0_BASE) && (i < EXT_A0_BASE + MATRIX_ELEMS)) ||
+                         ((i >= EXT_B0_BASE) && (i < EXT_B0_BASE + MATRIX_ELEMS)) ||
+                         ((i >= EXT_C0_BASE) && (i < EXT_C0_BASE + MATRIX_ELEMS));
+        if (!in_used_region && (ext_mem[i] !== 32'h5a5a_a5a5)) begin
+          $display("FAIL desc_dma_memory_unchanged: ext_mem[%0d] changed to 0x%08x", i, ext_mem[i]);
+          local_failures = local_failures + 1;
+        end
       end
 
       if (local_failures == 0) begin
         tests_passed = tests_passed + 1;
-        $display("PASS desc_core_window_blocked_while_busy");
+        $display("PASS desc_dma_memory_unchanged");
       end else begin
         failures = failures + local_failures;
       end
-      apb_write(DMA_CTRL, 32'h2);
+      clear_dma_done();
     end
   endtask
 
@@ -308,7 +523,9 @@ module tb_tinynpu_dma_descriptor_wrapper;
     logic [31:0] status;
     begin
       local_failures = 0;
-      apb_write(DMA_CTRL, 32'h1);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
       apb_write(DMA_CTRL, 32'h1);
       apb_read(DMA_STATUS, status);
       if (status[2] !== 1'b0) begin
@@ -423,6 +640,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
     paddr   = '0;
     pwdata  = '0;
     presetn = 1'b0;
+    clear_ext_mem(32'h0);
 
     repeat (5) @(posedge pclk);
     presetn = 1'b1;
@@ -434,8 +652,11 @@ module tb_tinynpu_dma_descriptor_wrapper;
     run_desc_invalid_access();
     run_forwarded_core_identity();
     run_forwarded_core_invalid_unaligned();
-    run_desc_fsm_core_launch();
-    run_desc_core_window_blocked_while_busy();
+    run_desc_dma_identity();
+    run_desc_dma_mixed_signed();
+    run_desc_dma_back_to_back();
+    run_desc_dma_core_window_blocked_while_busy();
+    run_desc_dma_memory_unchanged();
 
     $display("DMA descriptor-wrapper tests passed: %0d", tests_passed);
     if (failures == 0) begin

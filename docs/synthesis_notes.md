@@ -8,8 +8,9 @@ same flow for the other MAC variants. `make synth-apb` synthesizes the optional
 APB wrapper around the default `row4` core.
 
 `make synth-dma-desc` synthesizes the optional DMA descriptor wrapper around the
-APB core wrapper. This includes synthesizable descriptor registers and a
-DMA-control FSM skeleton, but no real DMA data mover.
+APB core wrapper. This includes synthesizable descriptor registers, a DMA FSM,
+and a simple abstract external memory port. It is not AXI and has no burst or
+outstanding transaction support.
 
 The flow reads the SystemVerilog RTL, sets `tinynpu_top` as the top module, runs
 generic synthesis cleanup and optimization passes, writes a synthesized Verilog
@@ -34,7 +35,8 @@ Variant-specific outputs are written under `build/synth/<variant>/`:
 - No real standard-cell library mapping yet
 - No timing constraints yet
 - No clock uncertainty or IO delay modeling
-- No real DMA data mover or memory bus master yet
+- No AXI/AHB memory bus master yet
+- No bursts, byte strobes, outstanding transactions, or memory error responses
 - No OpenROAD floorplan, placement, routing, or parasitics
 - No technology-specific area, power, or timing claims
 
