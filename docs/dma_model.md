@@ -5,7 +5,7 @@ tinyNPU using testbench tasks and a simulated external memory array. It is not
 synthesizable DMA RTL.
 
 The model instantiates `tinynpu_apb_wrapper` and moves data through APB
-transactions. In v17, tests program simulation-only descriptor registers first,
+transactions. Tests program simulation-only descriptor registers first,
 then the descriptor model performs the movement sequence:
 
 1. Software writes A/B/C external-memory base addresses.
@@ -17,8 +17,9 @@ then the descriptor model performs the movement sequence:
 7. The model reads C through APB and stores it back into external memory.
 8. The descriptor model sets `DMA_STATUS.done`.
 
-The descriptor registers are testbench-side model state only. They are not part
-of `tinynpu_apb_wrapper`, `tinynpu_top`, or any synthesizable product RTL.
+These descriptor registers are testbench-side model state only. v18 also has an
+optional synthesizable descriptor-register wrapper, documented in
+`docs/dma_descriptor_wrapper.md`, but that wrapper does not move memory.
 
 ## Descriptor Register Map
 
@@ -74,7 +75,7 @@ Outputs are written under `build/sim/apb_dma/`, including:
 ## Limitations
 
 - No real DMA controller RTL.
-- No real descriptor-register RTL.
+- No real DMA data mover RTL.
 - No AXI master.
 - No burst transactions.
 - No bus arbitration.
@@ -83,7 +84,6 @@ Outputs are written under `build/sim/apb_dma/`, including:
 
 ## Future Path
 
-- Move descriptor registers into a synthesizable control block.
-- Add a real DMA controller.
+- Connect the synthesizable descriptor wrapper to a real DMA controller.
 - Add AXI-lite or APB control and an AXI/AHB memory master.
 - Add memory latency, backpressure, and arbitration tests.

@@ -60,12 +60,16 @@ def main():
         return 1
 
     summary, cells = parse_stats(path.read_text())
+    mac_variant = sys.argv[5] if len(sys.argv) >= 6 else "row4"
     top_module = sys.argv[6] if len(sys.argv) == 7 else "tinynpu_top"
+    notes = "Generic Yosys synthesis only; not technology-mapped PPA."
+    if top_module == "tinynpu_dma_descriptor_wrapper":
+        notes = "Generic Yosys synthesis only; includes descriptor registers and wrapped tinyNPU core, but no real DMA data mover."
 
     summary_json = {
         "status": "passed",
         "top_module": top_module,
-        "mac_variant": sys.argv[5] if len(sys.argv) == 6 else "row4",
+        "mac_variant": mac_variant,
         "yosys_log_path": str(Path(sys.argv[2])) if len(sys.argv) >= 5 else "build/synth/yosys.log",
         "stat_report_path": str(path),
         "netlist_path": str(Path(sys.argv[3])) if len(sys.argv) >= 5 else "build/synth/tinynpu_top_synth.v",
@@ -74,7 +78,7 @@ def main():
         "total_cells": summary.get("cells"),
         "cell_counts": cells,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "notes": "Generic Yosys synthesis only; not technology-mapped PPA.",
+        "notes": notes,
     }
 
     if len(sys.argv) >= 5:

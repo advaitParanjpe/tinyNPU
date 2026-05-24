@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v17 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v18 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -8,6 +8,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Fixed 4x4 signed int8 matrix multiply: `C = A x B`, with signed int32 C results.
 - Simple always-ready register bus with CTRL/STATUS, A/B scratchpads, and C result storage.
 - Optional APB-lite-style wrapper around the existing simple-bus core.
+- Optional synthesizable DMA descriptor wrapper around the APB core wrapper.
 - DMA-style APB system simulation model with testbench-side descriptor registers.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
@@ -34,8 +35,10 @@ make golden
 make sim
 make sim-apb
 make sim-apb-dma
+make sim-dma-desc
 make synth
 make synth-apb
+make synth-dma-desc
 make results
 make sim-serial
 make synth-serial
@@ -85,11 +88,11 @@ fixed 4x4 design.
 The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
-There is no AXI, synthesizable DMA, SRAM macro, or real external memory
-interface in v17. APB is available only as an optional wrapper around the
-existing simple-bus core. The DMA-style flow is a simulation model that uses
-testbench-side descriptor registers to move data between a testbench memory
-array and tinyNPU through APB transactions.
+There is no AXI, DMA data mover, SRAM macro, or real external memory interface
+in v18. APB is available as an optional wrapper around the existing simple-bus
+core. A second optional wrapper adds synthesizable descriptor registers at
+`0x100`-`0x11f`, while forwarding `0x000`-`0x0ff` to the APB core wrapper. The
+DMA-style flow still moves data only in simulation.
 
 ## Register Map
 
@@ -156,6 +159,7 @@ The current self-checking Icarus simulation covers:
 - control/status behavior: start while busy, sticky done, clear done, new start after done
 - bus protocol behavior: always-ready signaling, A/B readback, C read-only storage, ignored CTRL bits, unaligned access handling
 - focused APB wrapper tests for identity, mixed signed, invalid/unaligned access, C read-only behavior, start while busy, and reset
+- synthesizable DMA descriptor-wrapper tests for descriptor read/write, status, and forwarded core access
 - descriptor-driven DMA-style APB system-flow tests for external-memory load, compute, poll, and store-back behavior
 - reset mid-operation recovery
 - invalid bus read/write behavior
@@ -183,6 +187,7 @@ Run generic Yosys synthesis:
 ```sh
 make synth
 make synth-apb
+make synth-dma-desc
 make synth-serial
 make synth-full16
 ```
@@ -191,6 +196,7 @@ Variant-specific outputs are written under:
 
 - `build/synth/row4/`
 - `build/synth/apb/`
+- `build/synth/dma_desc/`
 - `build/synth/serial/`
 - `build/synth/full16/`
 
@@ -213,8 +219,9 @@ make precommit
 ```
 
 `make precommit` runs `make check`, `make golden`, `make compare`, APB wrapper
-simulation/synthesis, and the descriptor-driven APB DMA-style simulation model. See
-`docs/development.md` for the recommended local workflow.
+simulation/synthesis, descriptor-wrapper simulation/synthesis, and the
+descriptor-driven APB DMA-style simulation model. See `docs/development.md` for
+the recommended local workflow.
 
 ## Results Artifacts
 
@@ -228,6 +235,8 @@ Variant-specific summaries are written under:
 
 - `build/sim/row4/`, `build/sim/serial/`, and `build/sim/full16/`
 - `build/synth/row4/`, `build/synth/serial/`, and `build/synth/full16/`
+- `build/sim/apb/`, `build/sim/apb_dma/`, and `build/sim/dma_desc_wrapper/`
+- `build/synth/apb/` and `build/synth/dma_desc/`
 
 Each `build/sim/<variant>/` directory contains:
 
@@ -247,3 +256,4 @@ Human-readable notes live in:
 - `docs/memory_architecture.md`
 - `docs/apb_wrapper.md`
 - `docs/dma_model.md`
+- `docs/dma_descriptor_wrapper.md`

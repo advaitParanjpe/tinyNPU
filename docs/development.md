@@ -20,7 +20,9 @@ touching integration logic:
 ```sh
 make sim-apb
 make sim-apb-dma
+make sim-dma-desc
 make synth-apb
+make synth-dma-desc
 ```
 
 Run the full variant comparison before commit:
@@ -44,7 +46,8 @@ make precommit
 ```
 
 This runs `make check`, `make golden`, `make compare`, `make sim-apb`,
-`make sim-apb-dma`, and `make synth-apb`.
+`make sim-apb-dma`, `make sim-dma-desc`, `make synth-apb`, and
+`make synth-dma-desc`.
 
 ## Tools
 

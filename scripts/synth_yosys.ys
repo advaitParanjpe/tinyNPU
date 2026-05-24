@@ -7,6 +7,7 @@ read_verilog -sv rtl/tinynpu_scratchpad_i8.sv
 read_verilog -sv rtl/tinynpu_result_buffer_i32.sv
 read_verilog -sv rtl/tinynpu_top.sv
 read_verilog -sv rtl/tinynpu_apb_wrapper.sv
+read_verilog -sv rtl/tinynpu_dma_descriptor_wrapper.sv
 
 hierarchy -check -top @TOP_MODULE@
 proc

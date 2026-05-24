@@ -3,6 +3,10 @@
 `rtl/tinynpu_apb_wrapper.sv` is an optional APB-lite-style slave wrapper around
 the existing `tinynpu_top` simple-bus core. It does not replace the simple bus.
 
+`rtl/tinynpu_dma_descriptor_wrapper.sv` optionally wraps this APB wrapper with a
+12-bit APB address space and synthesizable descriptor registers. That wrapper is
+documented in `docs/dma_descriptor_wrapper.md`.
+
 ## Signals
 
 - `pclk`: APB clock, connected to core `clk`
@@ -44,8 +48,8 @@ read data.
 ## Current Limitations
 
 - Focused APB wrapper testbench only; not full APB protocol coverage.
-- A DMA-style APB system testbench exists, but it is a testbench model only,
-  not synthesizable DMA RTL.
+- A DMA descriptor wrapper exists, but it implements descriptor/status
+  registers only, not DMA memory movement.
 - No APB error signaling yet.
 - No APB protection, strobe, or byte-lane support.
 - No AXI, real DMA, SRAM macro, or SoC interconnect integration.

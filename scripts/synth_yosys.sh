@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 MAC_VARIANT="${1:-row4}"
-if [ "${MAC_VARIANT}" != "row4" ] && [ "${MAC_VARIANT}" != "serial" ] && [ "${MAC_VARIANT}" != "full16" ] && [ "${MAC_VARIANT}" != "apb" ]; then
-  echo "ERROR: expected variant 'row4', 'serial', 'full16', or 'apb', got '${MAC_VARIANT}'"
+if [ "${MAC_VARIANT}" != "row4" ] && [ "${MAC_VARIANT}" != "serial" ] && [ "${MAC_VARIANT}" != "full16" ] && [ "${MAC_VARIANT}" != "apb" ] && [ "${MAC_VARIANT}" != "dma_desc" ]; then
+  echo "ERROR: expected variant 'row4', 'serial', 'full16', 'apb', or 'dma_desc', got '${MAC_VARIANT}'"
   exit 2
 fi
 
@@ -14,6 +14,9 @@ NETLIST_BASENAME="tinynpu_top_synth.v"
 if [ "${MAC_VARIANT}" = "apb" ]; then
   TOP_MODULE="tinynpu_apb_wrapper"
   NETLIST_BASENAME="tinynpu_apb_wrapper_synth.v"
+elif [ "${MAC_VARIANT}" = "dma_desc" ]; then
+  TOP_MODULE="tinynpu_dma_descriptor_wrapper"
+  NETLIST_BASENAME="tinynpu_dma_descriptor_wrapper_synth.v"
 fi
 
 SYNTH_ROOT="${REPO_ROOT}/build/synth"

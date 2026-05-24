@@ -1,11 +1,11 @@
-.PHONY: all check precommit sim sim-apb sim-apb-dma sim-serial sim-full16 golden vectors synth synth-apb synth-serial synth-full16 results results-serial results-full16 compare clean
+.PHONY: all check precommit sim sim-apb sim-apb-dma sim-dma-desc sim-serial sim-full16 golden vectors synth synth-apb synth-dma-desc synth-serial synth-full16 results results-serial results-full16 compare clean
 
 all: vectors golden sim synth results
 
 check:
 	python3 scripts/check_repo.py
 
-precommit: check golden compare sim-apb sim-apb-dma synth-apb
+precommit: check golden compare sim-apb sim-apb-dma sim-dma-desc synth-apb synth-dma-desc
 
 sim:
 	python3 sim/run_sim.py --mac-variant row4
@@ -15,6 +15,9 @@ sim-apb:
 
 sim-apb-dma:
 	python3 sim/run_apb_dma_sim.py
+
+sim-dma-desc:
+	python3 sim/run_dma_descriptor_wrapper_sim.py
 
 sim-serial:
 	python3 sim/run_sim.py --mac-variant serial
@@ -34,6 +37,9 @@ synth:
 synth-apb:
 	scripts/synth_yosys.sh apb
 
+synth-dma-desc:
+	scripts/synth_yosys.sh dma_desc
+
 synth-serial:
 	scripts/synth_yosys.sh serial
 
@@ -41,13 +47,13 @@ synth-full16:
 	scripts/synth_yosys.sh full16
 
 results: sim synth
-	python3 scripts/save_result_snapshot.py --version v17 --mac-variant row4 --datapath "4-lane row MAC" --sim-summary build/sim/row4/sim_summary.json --synth-summary build/synth/row4/synth_summary.json
+	python3 scripts/save_result_snapshot.py --version v18 --mac-variant row4 --datapath "4-lane row MAC" --sim-summary build/sim/row4/sim_summary.json --synth-summary build/synth/row4/synth_summary.json
 
 results-serial: sim-serial synth-serial
-	python3 scripts/save_result_snapshot.py --version v17 --mac-variant serial --datapath "serial MAC baseline" --sim-summary build/sim/serial/sim_summary.json --synth-summary build/synth/serial/synth_summary.json
+	python3 scripts/save_result_snapshot.py --version v18 --mac-variant serial --datapath "serial MAC baseline" --sim-summary build/sim/serial/sim_summary.json --synth-summary build/synth/serial/synth_summary.json
 
 results-full16: sim-full16 synth-full16
-	python3 scripts/save_result_snapshot.py --version v17 --mac-variant full16 --datapath "16-lane full parallel MAC" --sim-summary build/sim/full16/sim_summary.json --synth-summary build/synth/full16/synth_summary.json
+	python3 scripts/save_result_snapshot.py --version v18 --mac-variant full16 --datapath "16-lane full parallel MAC" --sim-summary build/sim/full16/sim_summary.json --synth-summary build/synth/full16/synth_summary.json
 
 compare: results results-serial results-full16
 

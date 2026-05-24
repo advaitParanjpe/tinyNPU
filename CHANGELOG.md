@@ -1,5 +1,12 @@
 # Changelog
 
+## v18
+
+- Added optional synthesizable `tinynpu_dma_descriptor_wrapper`.
+- Added descriptor-wrapper simulation and generic Yosys synthesis targets.
+- Kept DMA memory movement out of RTL; descriptor start only updates
+  descriptor status for now.
+
 ## v17
 
 - Added simulation-only DMA descriptor registers to the APB DMA-model flow.
