@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v21 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v22 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -15,6 +15,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Directed, edge-case, bus protocol, control/status, and deterministic random golden-model verification.
 - Lightweight simulation assertions/checkers and bounded-latency checking.
 - Coverage-style scenario reporting for tested functional/control/bus cases.
+- DMA memory-port fixed-latency and deterministic backpressure testing.
 - Generic Yosys synthesis for all variants.
 - Lightweight repository checks for commit readiness.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
@@ -89,13 +90,15 @@ The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
 There is no AXI, SRAM macro, burst engine, or outstanding memory transaction
-support in v21. APB is available as an optional wrapper around the existing
+support in v22. APB is available as an optional wrapper around the existing
 simple-bus core. A second optional wrapper adds synthesizable descriptor
 registers at `0x100`-`0x11f`, while forwarding `0x000`-`0x0ff` to the APB core
 wrapper. Its DMA-control FSM runs
 `LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C` and moves matrix data
 over a simple single-beat ready/valid memory port. This memory port is an
-abstract integration step, not AXI.
+abstract integration step, not AXI. `mem_valid` remains asserted until
+`mem_ready`, and `mem_addr`, `mem_we`, and write data remain stable while a
+request is stalled.
 
 ## Design Layers
 
@@ -176,6 +179,7 @@ The current self-checking Icarus simulation covers:
 - bus protocol behavior: always-ready signaling, A/B readback, C read-only storage, ignored CTRL bits, unaligned access handling
 - focused APB wrapper tests for identity, mixed signed, invalid/unaligned access, C read-only behavior, start while busy, and reset
 - synthesizable DMA descriptor-wrapper tests for descriptor read/write, DMA memory movement, core launch, busy core-window blocking, and forwarded core access
+- fixed-latency and deterministic random-backpressure tests for the descriptor wrapper memory port
 - descriptor-driven DMA-style APB system-flow tests for external-memory load, compute, poll, and store-back behavior
 - reset mid-operation recovery
 - invalid bus read/write behavior

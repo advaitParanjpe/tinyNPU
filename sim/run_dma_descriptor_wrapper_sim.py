@@ -24,6 +24,11 @@ TEST_NAMES = (
     "desc_dma_back_to_back",
     "desc_dma_core_window_blocked_while_busy",
     "desc_dma_memory_unchanged",
+    "desc_dma_fixed_latency_identity",
+    "desc_dma_fixed_latency_mixed_signed",
+    "desc_dma_random_backpressure_identity",
+    "desc_dma_random_backpressure_back_to_back",
+    "desc_dma_mem_protocol_stability",
 )
 
 FSM_STATES = (
@@ -62,6 +67,18 @@ def write_summary(status, tests_passed=0, passed_names=None, notes=None):
             "desc_dma_identity" in (passed_names or [])
             and "desc_dma_mixed_signed" in (passed_names or [])
         ),
+        "memory_backpressure_verified": (
+            "desc_dma_fixed_latency_identity" in (passed_names or [])
+            and "desc_dma_random_backpressure_identity" in (passed_names or [])
+        ),
+        "fixed_latency_tests": sum(
+            1 for name in (passed_names or []) if name.startswith("desc_dma_fixed_latency")
+        ),
+        "random_backpressure_tests": sum(
+            1 for name in (passed_names or []) if name.startswith("desc_dma_random_backpressure")
+        ),
+        "protocol_stability_checked": "desc_dma_mem_protocol_stability" in (passed_names or []),
+        "stalled_transactions_observed": "desc_dma_mem_protocol_stability" in (passed_names or []),
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
         "notes": notes or "Uses simple abstract ready/valid memory port; not AXI",

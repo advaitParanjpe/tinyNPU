@@ -1,5 +1,15 @@
 # Changelog
 
+## v22
+
+- Added fixed-latency and deterministic random-backpressure modes to the DMA
+  descriptor-wrapper memory model.
+- Added memory-port protocol stability checking for stalled transactions.
+- Added descriptor-wrapper regression cases for fixed-latency identity/mixed
+  signed operations and random-backpressure identity/back-to-back operations.
+- Kept AXI, bursts, outstanding transactions, and memory error responses out of
+  scope.
+
 ## v21
 
 - Added a simple word-addressed ready/valid external memory port to

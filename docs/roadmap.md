@@ -7,6 +7,7 @@
 - MAC variants: `serial`, `row4`, and `full16`.
 - APB-lite-style wrapper around the core.
 - Synthesizable DMA descriptor wrapper with DMA FSM and abstract memory port.
+- Fixed-latency and deterministic backpressure tests for the abstract memory port.
 - Testbench-only DMA-style external-memory movement model.
 - Directed, edge, bus, APB, descriptor, random, and checker-based simulation.
 - Generic Yosys synthesis and structured result summaries.
@@ -15,7 +16,7 @@
 
 - Memory latency model for system-level simulation.
 - Optional AXI/AHB memory interface.
-- Backpressure/error tests for the abstract memory port.
+- Memory error-response model for the abstract memory port.
 - Technology-mapped synthesis setup and initial timing/PPA estimates.
 
 ## Later

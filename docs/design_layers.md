@@ -76,7 +76,7 @@ Optional APB-lite-style wrapper with a 12-bit APB address space. It forwards
 `0x000`-`0x0ff` to `tinynpu_apb_wrapper` and implements descriptor registers at
 `0x100`-`0x11f`.
 
-The v21 descriptor start behavior runs a small DMA-control FSM:
+The descriptor start behavior runs a small DMA-control FSM:
 
 ```text
 IDLE -> LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C -> DONE
@@ -89,6 +89,8 @@ from the core and writes them back through the abstract memory port.
 
 The memory port is word-addressed, single-beat, ready/valid, and not AXI. It has
 no bursts, byte strobes, outstanding transactions, or error response.
+The descriptor-wrapper testbench covers always-ready, fixed-latency, and
+deterministic random-backpressure memory behavior.
 
 Status: synthesizable.
 

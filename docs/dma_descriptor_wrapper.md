@@ -11,7 +11,7 @@ bursts or outstanding memory transactions.
 
 ## External Memory Port
 
-The v21 wrapper adds this single-beat ready/valid memory port:
+The wrapper exposes this single-beat ready/valid memory port:
 
 | Signal | Direction | Description |
 | --- | --- | --- |
@@ -22,8 +22,10 @@ The v21 wrapper adds this single-beat ready/valid memory port:
 | `mem_rdata[31:0]` | input | read data for loads |
 | `mem_ready` | input | transaction accepted/data valid |
 
-For reads, `mem_rdata` is sampled when `mem_valid && mem_ready`. For writes,
-`mem_wdata` is accepted when `mem_valid && mem_ready`. There are no byte
+`mem_valid` remains asserted until `mem_ready`. `mem_addr`, `mem_we`, and
+`mem_wdata` remain stable while `mem_valid && !mem_ready`. For reads,
+`mem_rdata` is sampled only when `mem_valid && mem_ready`. For writes,
+`mem_wdata` is accepted only when `mem_valid && mem_ready`. There are no byte
 strobes, bursts, outstanding transactions, or memory error responses.
 
 ## Address Map
@@ -94,9 +96,21 @@ Descriptor-register accesses are ready in the APB access phase.
 - The DMA descriptor wrapper performs real movement over its abstract memory
   port, but it is not an AXI/AHB DMA engine.
 
+## Backpressure Verification
+
+`tb/tb_tinynpu_dma_descriptor_wrapper.sv` verifies the memory port in three
+modes:
+
+- always-ready memory
+- fixed-latency memory
+- deterministic random backpressure
+
+The testbench also monitors that a stalled memory request keeps address,
+direction, and write data stable until `mem_ready` completes the transaction.
+
 ## Future Path
 
 - Replace the abstract memory port with a real SoC memory bus master.
 - Add interrupt/status/error handling.
-- Add burst transfers, byte strobes, memory error responses, and richer
-  backpressure tests.
+- Add burst transfers, byte strobes, memory error responses, and longer
+  randomized backpressure regressions.

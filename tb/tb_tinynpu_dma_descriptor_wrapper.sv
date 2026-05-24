@@ -33,6 +33,10 @@ module tb_tinynpu_dma_descriptor_wrapper;
   logic [31:0] mem_rdata;
   logic        mem_ready;
 
+  localparam int MEM_MODE_ALWAYS_READY        = 0;
+  localparam int MEM_MODE_FIXED_LATENCY       = 1;
+  localparam int MEM_MODE_RANDOM_BACKPRESSURE = 2;
+  localparam int MEM_FIXED_LATENCY_CYCLES     = 3;
   localparam int EXT_MEM_WORDS = 256;
   localparam int EXT_A0_BASE = 0;
   localparam int EXT_B0_BASE = 32;
@@ -45,6 +49,18 @@ module tb_tinynpu_dma_descriptor_wrapper;
 
   int failures;
   int tests_passed;
+  int mem_model_mode;
+  int mem_wait_count;
+  int mem_transaction_count;
+  int mem_stall_count;
+  int mem_stalled_transactions;
+  int mem_protocol_violations;
+  logic mem_ready_q;
+  logic mem_wait_active;
+  logic monitor_stalled_q;
+  logic monitor_we_q;
+  logic [31:0] monitor_addr_q;
+  logic [31:0] monitor_wdata_q;
 
   tinynpu_dma_descriptor_wrapper dut (
     .pclk    (pclk),
@@ -65,12 +81,117 @@ module tb_tinynpu_dma_descriptor_wrapper;
     .mem_ready (mem_ready)
   );
 
-  assign mem_ready = 1'b1;
+  assign mem_ready = mem_ready_q;
   assign mem_rdata = (mem_addr < EXT_MEM_WORDS) ? ext_mem[mem_addr[7:0]] : 32'h0;
+
+  always @(posedge pclk or negedge presetn) begin
+    if (!presetn) begin
+      mem_ready_q          <= 1'b0;
+      mem_wait_count       <= 0;
+      mem_transaction_count <= 0;
+      mem_wait_active      <= 1'b0;
+    end else begin
+      case (mem_model_mode)
+        MEM_MODE_ALWAYS_READY: begin
+          mem_ready_q     <= 1'b1;
+          mem_wait_count  <= 0;
+          mem_wait_active <= 1'b0;
+        end
+
+        MEM_MODE_FIXED_LATENCY: begin
+          if (mem_ready_q && mem_valid) begin
+            mem_ready_q <= 1'b0;
+            mem_wait_active <= 1'b0;
+            mem_wait_count <= 0;
+            mem_transaction_count <= mem_transaction_count + 1;
+          end else if (!mem_valid) begin
+            mem_ready_q <= 1'b0;
+            mem_wait_active <= 1'b0;
+            mem_wait_count <= 0;
+          end else if (!mem_wait_active) begin
+            mem_ready_q <= 1'b0;
+            mem_wait_active <= 1'b1;
+            mem_wait_count <= MEM_FIXED_LATENCY_CYCLES;
+          end else if (mem_wait_count > 1) begin
+            mem_ready_q <= 1'b0;
+            mem_wait_count <= mem_wait_count - 1;
+          end else begin
+            mem_ready_q <= 1'b1;
+          end
+        end
+
+        MEM_MODE_RANDOM_BACKPRESSURE: begin
+          if (mem_ready_q && mem_valid) begin
+            mem_ready_q <= 1'b0;
+            mem_wait_active <= 1'b0;
+            mem_wait_count <= 0;
+            mem_transaction_count <= mem_transaction_count + 1;
+          end else if (!mem_valid) begin
+            mem_ready_q <= 1'b0;
+            mem_wait_active <= 1'b0;
+            mem_wait_count <= 0;
+          end else if (!mem_wait_active) begin
+            mem_ready_q <= 1'b0;
+            mem_wait_active <= 1'b1;
+            mem_wait_count <= ((mem_transaction_count * 3) % 5) + 1;
+          end else if (mem_wait_count > 1) begin
+            mem_ready_q <= 1'b0;
+            mem_wait_count <= mem_wait_count - 1;
+          end else begin
+            mem_ready_q <= 1'b1;
+          end
+        end
+
+        default: begin
+          mem_ready_q <= 1'b1;
+          mem_wait_count <= 0;
+          mem_wait_active <= 1'b0;
+        end
+      endcase
+    end
+  end
 
   always_ff @(posedge pclk) begin
     if (mem_valid && mem_we && mem_ready && (mem_addr < EXT_MEM_WORDS)) begin
       ext_mem[mem_addr[7:0]] <= mem_wdata;
+    end
+  end
+
+  always @(posedge pclk or negedge presetn) begin
+    if (!presetn) begin
+      monitor_stalled_q <= 1'b0;
+      monitor_we_q <= 1'b0;
+      monitor_addr_q <= 32'h0;
+      monitor_wdata_q <= 32'h0;
+      mem_stall_count <= 0;
+      mem_stalled_transactions <= 0;
+      mem_protocol_violations <= 0;
+    end else begin
+      if (monitor_stalled_q) begin
+        if (!mem_valid) begin
+          $display("FAIL memory protocol violation: mem_valid deasserted before mem_ready");
+          mem_protocol_violations <= mem_protocol_violations + 1;
+          monitor_stalled_q <= 1'b0;
+        end else begin
+          if ((mem_addr !== monitor_addr_q) || (mem_we !== monitor_we_q) ||
+              (monitor_we_q && (mem_wdata !== monitor_wdata_q))) begin
+            $display("FAIL memory protocol violation: memory request changed while stalled");
+            $display("  expected addr=0x%08x we=%0b wdata=0x%08x", monitor_addr_q, monitor_we_q, monitor_wdata_q);
+            $display("  actual   addr=0x%08x we=%0b wdata=0x%08x", mem_addr, mem_we, mem_wdata);
+            mem_protocol_violations <= mem_protocol_violations + 1;
+          end
+          if (mem_ready) begin
+            monitor_stalled_q <= 1'b0;
+          end
+        end
+      end else if (mem_valid && !mem_ready) begin
+        monitor_stalled_q <= 1'b1;
+        monitor_we_q <= mem_we;
+        monitor_addr_q <= mem_addr;
+        monitor_wdata_q <= mem_wdata;
+        mem_stall_count <= mem_stall_count + 1;
+        mem_stalled_transactions <= mem_stalled_transactions + 1;
+      end
     end
   end
 
@@ -138,6 +259,19 @@ module tb_tinynpu_dma_descriptor_wrapper;
       for (i = 0; i < EXT_MEM_WORDS; i = i + 1) begin
         ext_mem[i] = value;
       end
+    end
+  endtask
+
+  task automatic set_mem_model_mode(input int mode);
+    begin
+      @(negedge pclk);
+      mem_model_mode = mode;
+      mem_wait_count = 0;
+      mem_wait_active = 1'b0;
+      mem_ready_q = (mode == MEM_MODE_ALWAYS_READY);
+      mem_transaction_count = 0;
+      monitor_stalled_q = 1'b0;
+      repeat (2) @(posedge pclk);
     end
   endtask
 
@@ -256,7 +390,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
     begin
       timeout = 0;
       apb_read(DMA_STATUS, status);
-      while ((status[1] !== 1'b1) && (timeout < 120)) begin
+      while ((status[1] !== 1'b1) && (timeout < 1000)) begin
         timeout = timeout + 1;
         apb_read(DMA_STATUS, status);
       end
@@ -518,6 +652,129 @@ module tb_tinynpu_dma_descriptor_wrapper;
     end
   endtask
 
+  task automatic run_desc_dma_fixed_latency_identity;
+    int local_failures;
+    int c_failures;
+    begin
+      local_failures = 0;
+      set_mem_model_mode(MEM_MODE_FIXED_LATENCY);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done();
+      check_ext_c("desc_dma_fixed_latency_identity", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_fixed_latency_identity");
+      end else begin
+        failures = failures + local_failures;
+      end
+      clear_dma_done();
+    end
+  endtask
+
+  task automatic run_desc_dma_fixed_latency_mixed_signed;
+    int local_failures;
+    int c_failures;
+    begin
+      local_failures = 0;
+      set_mem_model_mode(MEM_MODE_FIXED_LATENCY);
+      clear_ext_mem(32'h0);
+      fill_mixed_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done();
+      check_ext_c("desc_dma_fixed_latency_mixed_signed", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_fixed_latency_mixed_signed");
+      end else begin
+        failures = failures + local_failures;
+      end
+      clear_dma_done();
+    end
+  endtask
+
+  task automatic run_desc_dma_random_backpressure_identity;
+    int local_failures;
+    int c_failures;
+    begin
+      local_failures = 0;
+      set_mem_model_mode(MEM_MODE_RANDOM_BACKPRESSURE);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done();
+      check_ext_c("desc_dma_random_backpressure_identity", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_random_backpressure_identity");
+      end else begin
+        failures = failures + local_failures;
+      end
+      clear_dma_done();
+    end
+  endtask
+
+  task automatic run_desc_dma_random_backpressure_back_to_back;
+    int local_failures;
+    int c_failures;
+    begin
+      local_failures = 0;
+      set_mem_model_mode(MEM_MODE_RANDOM_BACKPRESSURE);
+      clear_ext_mem(32'h0);
+
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done();
+      check_ext_c("desc_dma_random_backpressure_back_to_back_first", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+      clear_dma_done();
+
+      fill_mixed_case(EXT_A1_BASE, EXT_B1_BASE);
+      start_dma(EXT_A1_BASE, EXT_B1_BASE, EXT_C1_BASE);
+      wait_desc_done();
+      check_ext_c("desc_dma_random_backpressure_back_to_back_second", EXT_A1_BASE, EXT_B1_BASE, EXT_C1_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_random_backpressure_back_to_back");
+      end else begin
+        failures = failures + local_failures;
+      end
+      clear_dma_done();
+    end
+  endtask
+
+  task automatic run_desc_dma_mem_protocol_stability;
+    int local_failures;
+    begin
+      local_failures = 0;
+      if (mem_stalled_transactions <= 0) begin
+        $display("FAIL desc_dma_mem_protocol_stability: no stalled memory transactions observed");
+        local_failures = local_failures + 1;
+      end
+      if (mem_protocol_violations != 0) begin
+        $display("FAIL desc_dma_mem_protocol_stability: protocol violations=%0d", mem_protocol_violations);
+        local_failures = local_failures + 1;
+      end
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_mem_protocol_stability");
+      end else begin
+        failures = failures + local_failures;
+      end
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+    end
+  endtask
+
   task automatic run_desc_start_while_busy;
     int local_failures;
     logic [31:0] status;
@@ -633,6 +890,18 @@ module tb_tinynpu_dma_descriptor_wrapper;
 
     failures = 0;
     tests_passed = 0;
+    mem_model_mode = MEM_MODE_ALWAYS_READY;
+    mem_wait_count = 0;
+    mem_transaction_count = 0;
+    mem_stall_count = 0;
+    mem_stalled_transactions = 0;
+    mem_protocol_violations = 0;
+    mem_wait_active = 1'b0;
+    mem_ready_q = 1'b0;
+    monitor_stalled_q = 1'b0;
+    monitor_we_q = 1'b0;
+    monitor_addr_q = 32'h0;
+    monitor_wdata_q = 32'h0;
 
     psel    = 1'b0;
     penable = 1'b0;
@@ -645,6 +914,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
     repeat (5) @(posedge pclk);
     presetn = 1'b1;
     repeat (2) @(posedge pclk);
+    set_mem_model_mode(MEM_MODE_ALWAYS_READY);
 
     run_desc_regs_read_write();
     run_desc_fsm_start_done();
@@ -657,6 +927,11 @@ module tb_tinynpu_dma_descriptor_wrapper;
     run_desc_dma_back_to_back();
     run_desc_dma_core_window_blocked_while_busy();
     run_desc_dma_memory_unchanged();
+    run_desc_dma_fixed_latency_identity();
+    run_desc_dma_fixed_latency_mixed_signed();
+    run_desc_dma_random_backpressure_identity();
+    run_desc_dma_random_backpressure_back_to_back();
+    run_desc_dma_mem_protocol_stability();
 
     $display("DMA descriptor-wrapper tests passed: %0d", tests_passed);
     if (failures == 0) begin

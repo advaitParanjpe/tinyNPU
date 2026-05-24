@@ -11,6 +11,7 @@ APB wrapper around the default `row4` core.
 APB core wrapper. This includes synthesizable descriptor registers, a DMA FSM,
 and a simple abstract external memory port. It is not AXI and has no burst or
 outstanding transaction support.
+v22 adds memory-port backpressure verification without changing this RTL.
 
 The flow reads the SystemVerilog RTL, sets `tinynpu_top` as the top module, runs
 generic synthesis cleanup and optimization passes, writes a synthesized Verilog

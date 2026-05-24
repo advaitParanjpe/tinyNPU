@@ -47,6 +47,9 @@ path, number of passed coverage categories, and known gap count.
   `desc_dma_mixed_signed`, `desc_dma_back_to_back`,
   `desc_dma_core_window_blocked_while_busy`, and
   `desc_dma_memory_unchanged`.
+- DMA memory-port backpressure smoke tests through `make sim-dma-desc`,
+  including fixed-latency memory, deterministic random backpressure, and
+  stalled-request stability checking.
 
 ## Known Gaps
 

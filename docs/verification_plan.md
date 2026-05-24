@@ -18,6 +18,8 @@
   computation, C store-back to abstract memory, start while busy, external
   core-window blocking while busy, invalid descriptor access, and forwarded core
   identity/invalid access behavior
+- DMA memory-port behavior: always-ready, fixed-latency, and deterministic
+  random-backpressure operation, plus request stability while stalled
 - Descriptor-driven DMA-style APB system-flow behavior: descriptor programming,
   external-memory load of A/B, accelerator start, STATUS.done polling,
   C store-back, back-to-back operations, start while descriptor model is busy,
@@ -52,7 +54,7 @@
 - Functional coverage metrics
 - Full APB protocol coverage
 - AXI/AHB DMA data-mover behavior
-- Memory-port backpressure beyond always-ready smoke testing
+- Longer memory-port backpressure seed sweeps
 - Randomized bus timing with backpressure, since `bus_ready` is currently always high
 - Larger matrix sizes or configurable dimensions
 - Exhaustive signed int8 operand coverage
