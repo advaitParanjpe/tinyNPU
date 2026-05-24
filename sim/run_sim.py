@@ -17,6 +17,42 @@ LATEST_SIM_SUMMARY = SIM_BUILD_DIR / "sim_summary.json"
 JSON_VECTORS = REPO_ROOT / "tests" / "test_vectors" / "generated_matmul_tests.json"
 SVH_VECTORS = REPO_ROOT / "tests" / "test_vectors" / "generated_matmul_tests.svh"
 
+FUNCTIONAL_TESTS = (
+    "identity",
+    "all_zeros",
+    "all_ones",
+    "mixed_signed",
+    "max_positive",
+    "min_negative_times_positive",
+    "alternating_extremes",
+    "sparse_single_nonzero",
+)
+
+CONTROL_STATUS_TESTS = {
+    "back_to_back": ("back_to_back_first", "back_to_back_second"),
+    "start_while_busy": ("start_while_busy",),
+    "done_sticky_clear": ("done_sticky_clear",),
+    "new_start_after_done": ("new_start_after_done",),
+    "reset_mid_operation": ("reset_mid_operation",),
+}
+
+BUS_TESTS = ("invalid_bus_access",)
+
+ASSERTION_CHECKS = (
+    "busy_done_mutex",
+    "busy_start_not_accepted",
+    "done_bounded_after_start",
+    "reset_clears_status",
+    "c_stable_while_done",
+)
+
+KNOWN_COVERAGE_GAPS = (
+    "No AXI/APB protocol coverage yet",
+    "No SRAM macro or memory timing coverage yet",
+    "No formal proof yet",
+    "Only fixed 4x4 matrix size currently tested",
+)
+
 
 def run(cmd):
     print("+ " + " ".join(str(part) for part in cmd), flush=True)
@@ -33,7 +69,65 @@ def run_capture(cmd):
     return result.returncode, result.stdout
 
 
-def write_sim_summary(output, returncode, seed, num_random_tests, mac_variant, summary_path):
+def passed_test_names(output):
+    return set(re.findall(r"^PASS\s+([A-Za-z0-9_]+)", output, re.MULTILINE))
+
+
+def write_coverage_summary(output, sim_status, seed, num_random_tests, mac_variant, coverage_path):
+    coverage_path.parent.mkdir(parents=True, exist_ok=True)
+    passed = passed_test_names(output)
+    assertions_enabled = "Assertions/checkers: enabled" in output
+    sim_passed = sim_status == "passed"
+
+    functional = {name: name in passed for name in FUNCTIONAL_TESTS}
+    control_status = {
+        name: all(pass_name in passed for pass_name in pass_names)
+        for name, pass_names in CONTROL_STATUS_TESTS.items()
+    }
+    bus = {name: name in passed for name in BUS_TESTS}
+    assertions = {
+        name: bool(assertions_enabled and sim_passed)
+        for name in ASSERTION_CHECKS
+    }
+
+    generated_count_match = re.search(r"Generated random tests passed:\s+(\d+)", output)
+    generated_passed = int(generated_count_match.group(1)) if generated_count_match else 0
+    random_enabled = generated_passed == num_random_tests and num_random_tests > 0
+
+    all_covered = (
+        all(functional.values())
+        and all(control_status.values())
+        and all(bus.values())
+        and random_enabled
+        and all(assertions.values())
+    )
+    status = "passed" if sim_passed and all_covered else "failed"
+
+    coverage = {
+        "status": status,
+        "mac_variant": mac_variant,
+        "functional_tests": functional,
+        "control_status_tests": control_status,
+        "bus_tests": bus,
+        "random_tests": {
+            "enabled": random_enabled,
+            "num_tests": num_random_tests,
+            "seed": seed,
+        },
+        "assertions": {
+            "enabled": assertions_enabled,
+            **assertions,
+        },
+        "known_gaps": list(KNOWN_COVERAGE_GAPS),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    coverage_path.write_text(json.dumps(coverage, indent=2) + "\n")
+    print(f"Wrote coverage summary to {coverage_path.relative_to(REPO_ROOT)}")
+    return coverage
+
+
+def write_sim_summary(output, returncode, seed, num_random_tests, mac_variant, summary_path, coverage_path):
     summary_path.parent.mkdir(parents=True, exist_ok=True)
 
     def match_int(pattern):
@@ -50,6 +144,9 @@ def write_sim_summary(output, returncode, seed, num_random_tests, mac_variant, s
         "mac_variant": mac_variant,
         "seed": seed,
         "num_random_tests": num_random_tests,
+        "coverage_summary_path": str(coverage_path.relative_to(REPO_ROOT)),
+        "coverage_categories_passed": None,
+        "coverage_known_gaps_count": len(KNOWN_COVERAGE_GAPS),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -57,6 +154,22 @@ def write_sim_summary(output, returncode, seed, num_random_tests, mac_variant, s
     if status == "passed" and missing:
         summary["status"] = "parse_failed"
         summary["parse_error"] = "Missing summary fields: " + ", ".join(missing)
+
+    coverage = write_coverage_summary(output, summary["status"], seed, num_random_tests, mac_variant, coverage_path)
+    categories = (
+        coverage["functional_tests"],
+        coverage["control_status_tests"],
+        coverage["bus_tests"],
+        coverage["assertions"],
+    )
+    summary["coverage_categories_passed"] = sum(
+        1 for category in categories if all(value for key, value in category.items() if key != "enabled")
+    )
+    if coverage["random_tests"]["enabled"]:
+        summary["coverage_categories_passed"] += 1
+
+    if summary["status"] == "passed" and coverage["status"] != "passed":
+        summary["status"] = "coverage_failed"
 
     summary_text = json.dumps(summary, indent=2) + "\n"
     summary_path.write_text(summary_text)
@@ -91,6 +204,7 @@ def main():
     LATEST_SIM_SUMMARY.parent.mkdir(parents=True, exist_ok=True)
     sim_out = variant_build_dir / "tinynpu_top.vvp"
     sim_summary = variant_build_dir / "sim_summary.json"
+    coverage_summary = variant_build_dir / "coverage_summary.json"
 
     vector_cmd = [
         sys.executable,
@@ -141,9 +255,12 @@ def main():
         return rc
 
     rc, output = run_capture([vvp, str(sim_out)])
-    summary = write_sim_summary(output, rc, args.seed, args.num_random_tests, args.mac_variant, sim_summary)
+    summary = write_sim_summary(output, rc, args.seed, args.num_random_tests, args.mac_variant, sim_summary, coverage_summary)
     if summary["status"] == "parse_failed":
         print("ERROR: failed to parse simulation summary", file=sys.stderr)
+        return 1
+    if summary["status"] == "coverage_failed":
+        print("ERROR: coverage summary did not pass", file=sys.stderr)
         return 1
     return rc
 

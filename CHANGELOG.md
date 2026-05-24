@@ -1,5 +1,10 @@
 # Changelog
 
+## v11
+
+- Added coverage-style scenario reporting from simulation output.
+- Added per-variant `coverage_summary.json` artifacts and coverage documentation.
+
 ## v10
 
 - Cleanup, reproducibility, and commit-readiness pass.

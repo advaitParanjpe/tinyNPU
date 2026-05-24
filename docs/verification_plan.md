@@ -12,6 +12,7 @@
 - Deterministic random golden-model tests generated from a seed
 - Lightweight simulation checkers enabled by `TINYNPU_SIM_ASSERT`
 - Bounded latency from accepted start to done
+- Coverage-style scenario summaries generated from observed passing tests
 
 ## Assertions and Checkers
 
@@ -23,6 +24,13 @@
 - Testbench latency accounting reports accepted-start-to-done latency
 - Current observed max latencies are 66 cycles for `serial`, 26 cycles for
   `row4`, and 8 cycles for `full16`, bounded by a 200-cycle checker
+
+## Coverage-Style Reporting
+
+- `sim/run_sim.py` writes `build/sim/<variant>/coverage_summary.json`
+- The summary records functional, arithmetic edge, control/status, bus, random,
+  and checker scenarios observed in the regression
+- This is scenario coverage, not full functional coverage with covergroups
 
 ## Not Tested Yet
 

@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v10 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v11 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -11,6 +11,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
 - Directed, edge-case, control/status, and deterministic random golden-model verification.
 - Lightweight simulation assertions/checkers and bounded-latency checking.
+- Coverage-style scenario reporting for tested functional/control/bus cases.
 - Generic Yosys synthesis for all variants.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
 
@@ -42,7 +43,9 @@ The simulation builds under `build/` and writes a VCD waveform to
 `build/tinynpu_top.vcd`.
 
 `make sim` regenerates random vectors before compiling, using the default seed
-and test count from `sim/run_sim.py`.
+and test count from `sim/run_sim.py`. It writes both `sim_summary.json` and
+`coverage_summary.json` for the selected variant. `make compare` produces these
+artifacts for `row4`, `serial`, and `full16`.
 
 ## Architecture
 
@@ -71,7 +74,7 @@ The `full16` variant updates all 16 C accumulators in parallel for each `k`,
 then commits the full C matrix. It is an upper-parallelism baseline for the
 fixed 4x4 design.
 
-There is no AXI, APB, DMA, SRAM macro, or external memory interface in v10.
+There is no AXI, APB, DMA, SRAM macro, or external memory interface in v11.
 
 ## Register Map
 
@@ -133,6 +136,7 @@ The current self-checking Icarus simulation covers:
 - 50 deterministic random golden-model tests by default
 - lightweight checkers compiled with `-DTINYNPU_SIM_ASSERT`
 - bounded operation latency with `MAX_OPERATION_CYCLES = 200`
+- coverage-style scenario summaries emitted by `sim/run_sim.py`
 
 `make sim` enables the checkers by default. The default `row4` regression
 currently observes a 26-cycle accepted-start-to-done latency. The `serial`
@@ -179,6 +183,11 @@ Variant-specific summaries are written under:
 - `build/sim/row4/`, `build/sim/serial/`, and `build/sim/full16/`
 - `build/synth/row4/`, `build/synth/serial/`, and `build/synth/full16/`
 
+Each `build/sim/<variant>/` directory contains:
+
+- `sim_summary.json`
+- `coverage_summary.json`
+
 `make results` records the default `row4` variant. `make results-serial` records
 the serial baseline. `make results-full16` records the full16 variant.
 `make compare` runs and records all three.
@@ -186,3 +195,4 @@ Human-readable notes live in:
 
 - `docs/results.md`
 - `docs/architecture_variants.md`
+- `docs/coverage.md`

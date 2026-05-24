@@ -64,6 +64,8 @@ def main():
         "mac_variant": mac_variant,
         "datapath": args.datapath,
         "tests": tests,
+        "coverage_status": None,
+        "coverage_summary_path": None,
         "max_latency_cycles": max_latency,
         "synthesis_flow": "generic Yosys",
         "total_cells": synth_summary.get("total_cells"),
@@ -75,6 +77,14 @@ def main():
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "notes": "Generic Yosys synthesis only; not technology-mapped PPA.",
     }
+
+    if sim_summary is not None:
+        coverage_path = sim_summary.get("coverage_summary_path")
+        entry["coverage_summary_path"] = coverage_path
+        if coverage_path is not None:
+            full_coverage_path = REPO_ROOT / coverage_path
+            coverage_summary = load_json(full_coverage_path)
+            entry["coverage_status"] = coverage_summary.get("status") if coverage_summary else "missing"
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
