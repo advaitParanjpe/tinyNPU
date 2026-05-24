@@ -28,6 +28,9 @@
 - Descriptor-wrapper and AXI-Lite done IRQ behavior: disabled IRQ stays low,
   done IRQ pending is reported, enabling after done asserts IRQ, and
   `DMA_CTRL.clear_done` clears pending/IRQ
+- DMA timeout/error behavior: memory timeout, core timeout, `DMA_ERROR_CODE`,
+  error IRQ assertion/clear, start blocked while error is sticky, and recovery
+  after timeout
 - Descriptor-driven DMA-style APB system-flow behavior: descriptor programming,
   external-memory load of A/B, accelerator start, STATUS.done polling,
   C store-back, back-to-back operations, start while descriptor model is busy,
@@ -64,8 +67,7 @@
 - Functional coverage metrics
 - Full APB protocol coverage
 - Full AXI/AHB DMA data-mover behavior
-- Error IRQ stimulus, because the current DMA wrapper has no normal error
-  source
+- Memory bus error responses other than timeout
 - Longer memory-port backpressure seed sweeps
 - Randomized bus timing with backpressure, since `bus_ready` is currently always high
 - Larger matrix sizes or configurable dimensions

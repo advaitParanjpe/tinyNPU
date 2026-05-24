@@ -43,6 +43,12 @@ TEST_NAMES = (
     "desc_irq_disabled_no_assert",
     "desc_irq_done_assert_clear",
     "desc_irq_enable_after_done",
+    "desc_dma_mem_timeout",
+    "desc_dma_error_irq_assert_clear",
+    "desc_dma_start_blocked_while_error",
+    "desc_dma_recover_after_mem_timeout",
+    "desc_dma_core_timeout",
+    "desc_dma_recover_after_core_timeout",
 )
 
 FSM_STATES = (
@@ -102,7 +108,22 @@ def write_summary(status, tests_passed=0, passed_names=None, sim_stdout="", perf
             "desc_irq_done_assert_clear" in (passed_names or [])
             and "desc_irq_enable_after_done" in (passed_names or [])
         ),
-        "irq_error_verified": False,
+        "irq_error_verified": "desc_dma_error_irq_assert_clear" in (passed_names or []),
+        "timeout_error_handling_verified": (
+            "desc_dma_mem_timeout" in (passed_names or [])
+            and "desc_dma_core_timeout" in (passed_names or [])
+        ),
+        "memory_timeout_verified": "desc_dma_mem_timeout" in (passed_names or []),
+        "core_timeout_verified": "desc_dma_core_timeout" in (passed_names or []),
+        "recovery_after_timeout_verified": (
+            "desc_dma_recover_after_mem_timeout" in (passed_names or [])
+            and "desc_dma_recover_after_core_timeout" in (passed_names or [])
+        ),
+        "error_irq_verified": "desc_dma_error_irq_assert_clear" in (passed_names or []),
+        "error_code_register_verified": (
+            "desc_dma_mem_timeout" in (passed_names or [])
+            and "desc_dma_core_timeout" in (passed_names or [])
+        ),
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
         "notes": notes or "Uses simple abstract ready/valid memory port; not AXI",

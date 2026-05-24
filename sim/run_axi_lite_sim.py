@@ -22,6 +22,7 @@ TEST_NAMES = (
     "axi_lite_wstrb_behavior",
     "axi_lite_irq_done",
     "axi_lite_irq_disabled",
+    "axi_lite_irq_error",
 )
 
 
@@ -51,6 +52,9 @@ def write_summary(status, tests_passed=0, passed_names=None, notes=None):
         "irq_supported": True,
         "irq_tests_passed": sum(1 for name in (passed_names or []) if name.startswith("axi_lite_irq_")),
         "irq_done_verified": "axi_lite_irq_done" in (passed_names or []),
+        "error_irq_verified": "axi_lite_irq_error" in (passed_names or []),
+        "memory_timeout_verified": "axi_lite_irq_error" in (passed_names or []),
+        "error_code_register_verified": "axi_lite_irq_error" in (passed_names or []),
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
         "notes": notes

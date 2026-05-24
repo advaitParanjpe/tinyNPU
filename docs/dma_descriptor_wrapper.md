@@ -53,12 +53,14 @@ existing tinyNPU 8-bit APB address space.
 | `0x108` | `DMA_A_EXT_BASE` | external memory word address for A |
 | `0x10c` | `DMA_B_EXT_BASE` | external memory word address for B |
 | `0x110` | `DMA_C_EXT_BASE` | external memory word address for C |
-| `0x114` | `DMA_CONFIG` | reserved configuration register |
+| `0x114` | `DMA_CONFIG` | bits `[15:0]`: memory timeout cycles; bits `[31:16]`: core timeout cycles; zero fields select defaults |
+| `0x118` | `DMA_ERROR_CODE` | `0`: no error; `1`: memory timeout; `2`: core timeout |
 | `0x11c` | `DMA_IRQ_ENABLE` | bit 0: done IRQ enable; bit 1: error IRQ enable |
 | `0x120` | `DMA_IRQ_STATUS` | bit 0: done IRQ pending; bit 1: error IRQ pending |
 
 Invalid descriptor reads return `0`. Invalid descriptor writes are ignored.
-Writes to `DMA_IRQ_STATUS` are ignored. `pslverr` remains `0`.
+Writes to `DMA_ERROR_CODE` and `DMA_IRQ_STATUS` are ignored. `pslverr` remains
+`0`.
 
 ## Current Behavior
 
@@ -80,8 +82,25 @@ core done is observed. `DONE` clears busy and sets sticky descriptor done.
 
 A start write while busy is ignored and does not set error.
 
-`DMA_CTRL.clear_done` clears sticky done. `DMA_CTRL.clear_error` clears error.
-The current wrapper does not raise error internally.
+If `DMA_STATUS.error` is set, new starts are ignored until software writes
+`DMA_CTRL.clear_error`. `DMA_CTRL.clear_done` clears sticky done.
+`DMA_CTRL.clear_error` clears error, error IRQ pending, and `DMA_ERROR_CODE`.
+
+## Timeout And Error Handling
+
+v27 adds timeout/error handling:
+
+- Memory timeout applies while `LOAD_A`, `LOAD_B`, or `STORE_C` waits for
+  `mem_ready`.
+- Core timeout applies while `WAIT_CORE` polls for wrapped-core done.
+- On timeout, the wrapper aborts the operation, clears busy, sets sticky done,
+  sets error, records `DMA_ERROR_CODE`, sets error IRQ pending, and returns to
+  idle.
+
+`DMA_CONFIG[15:0]` configures memory timeout cycles. `DMA_CONFIG[31:16]`
+configures core timeout cycles. A zero field uses the default of 1024 cycles.
+Reads of `DMA_STATUS`, `DMA_ERROR_CODE`, and `DMA_IRQ_STATUS` do not clear any
+state.
 
 ## Interrupts
 
@@ -92,14 +111,13 @@ irq = (DMA_IRQ_ENABLE.done && DMA_IRQ_STATUS.done_pending) ||
       (DMA_IRQ_ENABLE.error && DMA_IRQ_STATUS.error_pending)
 ```
 
-`done_irq_pending` is set when the DMA FSM reaches done. `error_irq_pending` is
-set if the wrapper enters its internal error path. The current design does not
-have a normal memory-error or timeout source, so done IRQ behavior is verified
-and error IRQ logic is present but not stimulus-verified.
+`done_irq_pending` is set when the DMA FSM reaches normal done.
+`error_irq_pending` is set on memory or core timeout. Done and error IRQ
+behavior are both stimulus-verified.
 
 Reset clears `DMA_IRQ_ENABLE`, IRQ pending bits, and `irq`. Reading
 `DMA_IRQ_STATUS` does not clear pending bits. `DMA_IRQ_STATUS` writes are
-ignored in v26. Software clears done pending with `DMA_CTRL.clear_done` and
+ignored in v27. Software clears done pending with `DMA_CTRL.clear_done` and
 clears error pending with `DMA_CTRL.clear_error`. Polling `DMA_STATUS` remains
 supported.
 
@@ -146,12 +164,13 @@ stalled, or if request signals contain X/Z values when active.
 FSM phase. The runner writes `build/sim/dma_desc_wrapper/perf_summary.json` with
 total cycles and average `LOAD_A`, `LOAD_B`, `START_CORE`, `WAIT_CORE`, and
 `STORE_C` cycles for `always_ready`, `fixed_latency`, and
-`random_backpressure`. These are simulation measurements over the abstract
+`random_backpressure`. Timeout/error tests are excluded from the normal
+performance averages. These are simulation measurements over the abstract
 memory port, not AXI timing.
 
 ## Future Path
 
 - Replace the abstract memory port with a real SoC memory bus master.
-- Add a real error source and error IRQ stimulus.
+- Add memory-bus error responses beyond timeout.
 - Add burst transfers, byte strobes, memory error responses, and longer
   randomized backpressure regressions.

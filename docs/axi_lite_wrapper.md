@@ -72,6 +72,7 @@ Descriptor registers:
 | `0x10c` | `DMA_B_EXT_BASE` |
 | `0x110` | `DMA_C_EXT_BASE` |
 | `0x114` | `DMA_CONFIG` |
+| `0x118` | `DMA_ERROR_CODE` |
 | `0x11c` | `DMA_IRQ_ENABLE` |
 | `0x120` | `DMA_IRQ_STATUS` |
 
@@ -86,9 +87,15 @@ wrapper IRQ passed through unchanged:
 - `DMA_IRQ_STATUS[1]` is sticky error pending.
 - `DMA_CTRL.clear_done` clears done status and done IRQ pending.
 - `DMA_CTRL.clear_error` clears error status and error IRQ pending.
+- `DMA_ERROR_CODE` reports `0` for no error, `1` for memory timeout, and `2`
+  for core timeout.
 - `DMA_IRQ_STATUS` reads do not clear pending bits; writes are ignored.
 
 Polling `DMA_STATUS` remains supported.
+
+`DMA_CONFIG[15:0]` configures memory timeout cycles, and
+`DMA_CONFIG[31:16]` configures core timeout cycles. Zero fields select the
+descriptor wrapper defaults.
 
 ## External Memory Port
 
@@ -119,7 +126,8 @@ The testbench checks descriptor register read/write, forwarded core operation,
 descriptor-programmed DMA identity and mixed-signed matrix multiplies, AXI-Lite
 channel stalls, invalid/unaligned accesses, and the full-word-only `WSTRB`
 policy. v26 also checks done IRQ assertion, pending status, clear behavior, and
-disabled-IRQ behavior.
+disabled-IRQ behavior. v27 adds AXI-Lite-level memory-timeout error IRQ and
+`DMA_ERROR_CODE` checks.
 
 ## Synthesis
 

@@ -9,6 +9,7 @@
 - Synthesizable DMA descriptor wrapper with DMA FSM and abstract memory port.
 - Optional AXI4-Lite control wrapper around the DMA descriptor wrapper.
 - Descriptor done IRQ support on the descriptor and AXI-Lite wrappers.
+- DMA memory/core timeout handling, error codes, and error IRQ verification.
 - Fixed-latency and deterministic backpressure tests for the abstract memory port.
 - Reusable simulation-only checker for the abstract memory port.
 - Testbench-only DMA-style external-memory movement model.
@@ -19,12 +20,12 @@
 
 - Memory latency model for system-level simulation.
 - Optional full AXI/AHB memory master.
-- Memory error-response model for the abstract memory port.
+- Memory error-response model beyond timeout for the abstract memory port.
 - Technology-mapped synthesis setup and initial timing/PPA estimates.
 
 ## Later
 
-- Error IRQ stimulus and broader interrupt/status refinement.
+- Broader interrupt/status refinement.
 - Burst transfers and full memory-bus backpressure handling.
 - SRAM macro integration.
 - Formal checks for control/status behavior.

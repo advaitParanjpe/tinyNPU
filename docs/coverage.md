@@ -54,6 +54,10 @@ path, number of passed coverage categories, and known gap count.
   including disabled IRQ behavior, done pending, enable-after-done, and
   clear-done behavior.
 - AXI-Lite done IRQ smoke tests through `make sim-axi-lite`.
+- Descriptor-wrapper timeout/error tests through `make sim-dma-desc`, including
+  memory timeout, core timeout, error IRQ, error code readback, start blocked
+  while error is sticky, and recovery.
+- AXI-Lite memory-timeout error IRQ smoke test through `make sim-axi-lite`.
 - Reusable memory-port assertions are compiled into `make sim-dma-desc` with
   `TINYNPU_SIM_ASSERT`.
 - DMA descriptor-wrapper performance reporting emits per-mode cycle summaries
@@ -66,5 +70,4 @@ path, number of passed coverage categories, and known gap count.
 - No SRAM macro or memory timing coverage yet.
 - No formal proof yet.
 - Only fixed 4x4 matrix size currently tested.
-- Error IRQ logic is present but not stimulus-covered because there is no
-  normal DMA error source yet.
+- No memory-bus error response coverage beyond timeout.

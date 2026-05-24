@@ -16,7 +16,8 @@ outstanding transaction support.
 the DMA descriptor wrapper. This adds AXI-Lite control-plane handshaking only;
 the external memory interface remains the same abstract ready/valid port and is
 not a full AXI memory master. v26 adds descriptor done/error IRQ registers and
-an `irq` output to the descriptor and AXI-Lite wrappers.
+an `irq` output to the descriptor and AXI-Lite wrappers. v27 adds timeout
+counters, `DMA_ERROR_CODE`, and timeout/error control logic.
 
 v22 added memory-port backpressure verification without changing this RTL. v23
 adds `tinynpu_mem_port_assertions` for simulation only; it is not read by the
@@ -48,6 +49,7 @@ Variant-specific outputs are written under `build/synth/<variant>/`:
 - No clock uncertainty or IO delay modeling
 - No full AXI/AHB memory bus master yet
 - No bursts, byte strobes, outstanding transactions, or memory error responses
+  beyond internal timeout detection
 - No OpenROAD floorplan, placement, routing, or parasitics
 - No technology-specific area, power, or timing claims
 

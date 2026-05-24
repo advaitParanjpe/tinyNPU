@@ -15,6 +15,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
   localparam logic [11:0] DMA_B_EXT_BASE = 12'h10c;
   localparam logic [11:0] DMA_C_EXT_BASE = 12'h110;
   localparam logic [11:0] DMA_CONFIG     = 12'h114;
+  localparam logic [11:0] DMA_ERROR_CODE = 12'h118;
   localparam logic [11:0] DMA_IRQ_ENABLE = 12'h11c;
   localparam logic [11:0] DMA_IRQ_STATUS = 12'h120;
 
@@ -39,6 +40,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
   localparam int MEM_MODE_ALWAYS_READY        = 0;
   localparam int MEM_MODE_FIXED_LATENCY       = 1;
   localparam int MEM_MODE_RANDOM_BACKPRESSURE = 2;
+  localparam int MEM_MODE_TIMEOUT             = 3;
   localparam int MEM_FIXED_LATENCY_CYCLES     = 3;
   localparam int EXT_MEM_WORDS = 256;
   localparam int EXT_A0_BASE = 0;
@@ -66,6 +68,8 @@ module tb_tinynpu_dma_descriptor_wrapper;
   logic mem_ready_q;
   logic mem_wait_active;
   logic mem_stall_active_q;
+  logic sim_force_core_done_timeout;
+  logic sim_mem_abort;
   int perf_tests [0:2];
   int perf_total_sum [0:2];
   int perf_total_min [0:2];
@@ -93,7 +97,9 @@ module tb_tinynpu_dma_descriptor_wrapper;
     .mem_wdata (mem_wdata),
     .mem_rdata (mem_rdata),
     .mem_ready (mem_ready),
-    .irq       (irq)
+    .irq       (irq),
+    .sim_force_core_done_timeout (sim_force_core_done_timeout),
+    .sim_mem_abort               (sim_mem_abort)
   );
 
   tinynpu_mem_port_assertions u_mem_port_assertions (
@@ -104,7 +110,8 @@ module tb_tinynpu_dma_descriptor_wrapper;
     .mem_addr  (mem_addr),
     .mem_wdata (mem_wdata),
     .mem_rdata (mem_rdata),
-    .mem_ready (mem_ready)
+    .mem_ready (mem_ready),
+    .mem_abort (sim_mem_abort)
   );
 
   assign mem_ready = mem_ready_q;
@@ -168,6 +175,12 @@ module tb_tinynpu_dma_descriptor_wrapper;
           end
         end
 
+        MEM_MODE_TIMEOUT: begin
+          mem_ready_q <= 1'b0;
+          mem_wait_count <= mem_wait_count + 1;
+          mem_wait_active <= mem_valid;
+        end
+
         default: begin
           mem_ready_q <= 1'b1;
           mem_wait_count <= 0;
@@ -218,6 +231,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
         MEM_MODE_ALWAYS_READY:        mem_mode_name = "always_ready";
         MEM_MODE_FIXED_LATENCY:       mem_mode_name = "fixed_latency";
         MEM_MODE_RANDOM_BACKPRESSURE: mem_mode_name = "random_backpressure";
+        MEM_MODE_TIMEOUT:             mem_mode_name = "timeout";
         default:                      mem_mode_name = "unknown";
       endcase
     end
@@ -516,6 +530,23 @@ module tb_tinynpu_dma_descriptor_wrapper;
       end
       if (status[1] !== 1'b1) begin
         $display("FAIL wait_desc_done: timed out status=0x%08x", status);
+        failures = failures + 1;
+      end
+    end
+  endtask
+
+  task automatic wait_desc_error;
+    logic [31:0] status;
+    int timeout;
+    begin
+      timeout = 0;
+      apb_read(DMA_STATUS, status);
+      while (((status[1] !== 1'b1) || (status[2] !== 1'b1)) && (timeout < 1200)) begin
+        timeout = timeout + 1;
+        apb_read(DMA_STATUS, status);
+      end
+      if ((status[1] !== 1'b1) || (status[2] !== 1'b1)) begin
+        $display("FAIL wait_desc_error: timed out status=0x%08x", status);
         failures = failures + 1;
       end
     end
@@ -1008,6 +1039,220 @@ module tb_tinynpu_dma_descriptor_wrapper;
     end
   endtask
 
+  task automatic run_desc_dma_mem_timeout;
+    int local_failures;
+    logic [31:0] status;
+    logic [31:0] code;
+    logic [31:0] irq_status;
+    begin
+      local_failures = 0;
+      clear_dma_done_error();
+      apb_write(DMA_IRQ_ENABLE, 32'h2);
+      apb_write(DMA_CONFIG, 32'h0000_0008);
+      set_mem_model_mode(MEM_MODE_TIMEOUT);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_error();
+
+      apb_read(DMA_STATUS, status);
+      apb_read(DMA_ERROR_CODE, code);
+      apb_read(DMA_IRQ_STATUS, irq_status);
+      if (status[0] !== 1'b0 || status[1] !== 1'b1 || status[2] !== 1'b1) begin
+        $display("FAIL desc_dma_mem_timeout: status=0x%08x", status);
+        local_failures = local_failures + 1;
+      end
+      if (code !== 32'd1) begin
+        $display("FAIL desc_dma_mem_timeout: error code expected 1 actual 0x%08x", code);
+        local_failures = local_failures + 1;
+      end
+      if (irq_status[1] !== 1'b1) begin
+        $display("FAIL desc_dma_mem_timeout: error irq pending not set irq_status=0x%08x", irq_status);
+        local_failures = local_failures + 1;
+      end
+      clear_dma_done_error();
+      apb_write(DMA_IRQ_ENABLE, 32'h0);
+      apb_write(DMA_CONFIG, 32'h0);
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_mem_timeout");
+      end else begin
+        failures = failures + local_failures;
+      end
+    end
+  endtask
+
+  task automatic run_desc_dma_error_irq_assert_clear;
+    int local_failures;
+    logic [31:0] irq_status;
+    begin
+      local_failures = 0;
+      clear_dma_done_error();
+      apb_write(DMA_IRQ_ENABLE, 32'h2);
+      apb_write(DMA_CONFIG, 32'h0000_0008);
+      set_mem_model_mode(MEM_MODE_TIMEOUT);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_error();
+
+      if (irq !== 1'b1) begin
+        $display("FAIL desc_dma_error_irq_assert_clear: irq did not assert");
+        local_failures = local_failures + 1;
+      end
+      apb_read(DMA_IRQ_STATUS, irq_status);
+      if (irq_status[1] !== 1'b1) begin
+        $display("FAIL desc_dma_error_irq_assert_clear: error pending missing irq_status=0x%08x", irq_status);
+        local_failures = local_failures + 1;
+      end
+      apb_write(DMA_CTRL, 32'h4);
+      if (irq !== 1'b0) begin
+        $display("FAIL desc_dma_error_irq_assert_clear: irq did not clear after clear_error");
+        local_failures = local_failures + 1;
+      end
+      apb_read(DMA_IRQ_STATUS, irq_status);
+      if (irq_status[1] !== 1'b0) begin
+        $display("FAIL desc_dma_error_irq_assert_clear: pending did not clear irq_status=0x%08x", irq_status);
+        local_failures = local_failures + 1;
+      end
+      clear_dma_done();
+      apb_write(DMA_IRQ_ENABLE, 32'h0);
+      apb_write(DMA_CONFIG, 32'h0);
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_error_irq_assert_clear");
+      end else begin
+        failures = failures + local_failures;
+      end
+    end
+  endtask
+
+  task automatic run_desc_dma_start_blocked_while_error;
+    int local_failures;
+    logic [31:0] status;
+    begin
+      local_failures = 0;
+      clear_dma_done_error();
+      apb_write(DMA_CONFIG, 32'h0000_0008);
+      set_mem_model_mode(MEM_MODE_TIMEOUT);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_error();
+
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+      apb_write(DMA_CTRL, 32'h1);
+      repeat (8) @(posedge pclk);
+      apb_read(DMA_STATUS, status);
+      if (status[0] !== 1'b0 || status[2] !== 1'b1) begin
+        $display("FAIL desc_dma_start_blocked_while_error: status=0x%08x", status);
+        local_failures = local_failures + 1;
+      end
+      clear_dma_done_error();
+      apb_write(DMA_CONFIG, 32'h0);
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_start_blocked_while_error");
+      end else begin
+        failures = failures + local_failures;
+      end
+    end
+  endtask
+
+  task automatic run_desc_dma_recover_after_mem_timeout;
+    int local_failures;
+    int c_failures;
+    begin
+      local_failures = 0;
+      clear_dma_done_error();
+      apb_write(DMA_CONFIG, 32'h0);
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done();
+      check_ext_c("desc_dma_recover_after_mem_timeout", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+      clear_dma_done();
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_recover_after_mem_timeout");
+      end else begin
+        failures = failures + local_failures;
+      end
+    end
+  endtask
+
+  task automatic run_desc_dma_core_timeout;
+    int local_failures;
+    logic [31:0] status;
+    logic [31:0] code;
+    begin
+      local_failures = 0;
+      clear_dma_done_error();
+      apb_write(DMA_CONFIG, 32'h0008_0000);
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      sim_force_core_done_timeout = 1'b1;
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_error();
+      sim_force_core_done_timeout = 1'b0;
+
+      apb_read(DMA_STATUS, status);
+      apb_read(DMA_ERROR_CODE, code);
+      if (status[0] !== 1'b0 || status[1] !== 1'b1 || status[2] !== 1'b1) begin
+        $display("FAIL desc_dma_core_timeout: status=0x%08x", status);
+        local_failures = local_failures + 1;
+      end
+      if (code !== 32'd2) begin
+        $display("FAIL desc_dma_core_timeout: error code expected 2 actual 0x%08x", code);
+        local_failures = local_failures + 1;
+      end
+      clear_dma_done_error();
+      apb_write(DMA_CONFIG, 32'h0);
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_core_timeout");
+      end else begin
+        failures = failures + local_failures;
+      end
+    end
+  endtask
+
+  task automatic run_desc_dma_recover_after_core_timeout;
+    int local_failures;
+    int c_failures;
+    begin
+      local_failures = 0;
+      sim_force_core_done_timeout = 1'b0;
+      clear_dma_done_error();
+      apb_write(DMA_CONFIG, 32'h0);
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+      clear_ext_mem(32'h0);
+      fill_mixed_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done();
+      check_ext_c("desc_dma_recover_after_core_timeout", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
+      local_failures = local_failures + c_failures;
+      clear_dma_done();
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_dma_recover_after_core_timeout");
+      end else begin
+        failures = failures + local_failures;
+      end
+    end
+  endtask
+
   task automatic run_desc_start_while_busy;
     int local_failures;
     logic [31:0] status;
@@ -1045,8 +1290,8 @@ module tb_tinynpu_dma_descriptor_wrapper;
     begin
       local_failures = 0;
       apb_write(DMA_A_EXT_BASE, 32'h1234_5678);
-      apb_write(12'h118, 32'hffff_ffff);
-      apb_read(12'h118, data);
+      apb_write(12'h124, 32'hffff_ffff);
+      apb_read(12'h124, data);
       if (data !== 32'h0) begin
         $display("FAIL desc_invalid_access: invalid descriptor read=0x%08x", data);
         local_failures = local_failures + 1;
@@ -1132,6 +1377,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
     mem_wait_active = 1'b0;
     mem_ready_q = 1'b0;
     mem_stall_active_q = 1'b0;
+    sim_force_core_done_timeout = 1'b0;
     for (int mode = 0; mode < 3; mode = mode + 1) begin
       perf_tests[mode] = 0;
       perf_total_sum[mode] = 0;
@@ -1182,6 +1428,12 @@ module tb_tinynpu_dma_descriptor_wrapper;
     run_desc_irq_disabled_no_assert();
     run_desc_irq_done_assert_clear();
     run_desc_irq_enable_after_done();
+    run_desc_dma_mem_timeout();
+    run_desc_dma_error_irq_assert_clear();
+    run_desc_dma_start_blocked_while_error();
+    run_desc_dma_recover_after_mem_timeout();
+    run_desc_dma_core_timeout();
+    run_desc_dma_recover_after_core_timeout();
 
     print_perf_summary();
     $display("DMA descriptor-wrapper tests passed: %0d", tests_passed);

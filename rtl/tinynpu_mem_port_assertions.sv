@@ -8,7 +8,8 @@ module tinynpu_mem_port_assertions (
   input logic [31:0] mem_addr,
   input logic [31:0] mem_wdata,
   input logic [31:0] mem_rdata,
-  input logic        mem_ready
+  input logic        mem_ready,
+  input logic        mem_abort
 );
 
 `ifdef TINYNPU_SIM_ASSERT
@@ -59,11 +60,12 @@ module tinynpu_mem_port_assertions (
       end
 
       if (stalled_q) begin
-        if (!mem_valid) begin
+        if (mem_abort) begin
+          stalled_q <= 1'b0;
+        end else if (!mem_valid) begin
           $display("ASSERT FAIL mem_port_valid_held: mem_valid dropped before mem_ready");
           $fatal(1);
-        end
-        if (mem_addr !== stalled_addr_q) begin
+        end else if (mem_addr !== stalled_addr_q) begin
           $display("ASSERT FAIL mem_port_addr_stable: addr changed while stalled expected=0x%08x actual=0x%08x",
                    stalled_addr_q, mem_addr);
           $fatal(1);

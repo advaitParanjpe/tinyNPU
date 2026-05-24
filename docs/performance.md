@@ -32,12 +32,17 @@ Measurements are grouped by memory model:
 - `fixed_latency`
 - `random_backpressure`
 
+Timeout/error tests are excluded from these performance averages because they
+intentionally abort the DMA operation before normal store-back completion.
+
 ## What Is Not Measured
 
 - No AXI protocol timing.
 - No burst behavior.
 - No outstanding transactions.
 - No memory error responses.
+- Timeout/error paths are verified separately, not treated as normal throughput
+  measurements.
 - No post-synthesis timing.
 
 The values are useful for comparing memory-port behavior within this simulation

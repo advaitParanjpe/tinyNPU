@@ -20,6 +20,8 @@ top, not the MAC datapath comparison.
 | v25 | `tinynpu_axi_lite_wrapper` | row4 | 17356 | Generic Yosys only; AXI4-Lite control wrapper plus descriptor wrapper and abstract memory port; no full AXI memory master |
 | v26 | `tinynpu_dma_descriptor_wrapper` | row4 | 17091 | Adds descriptor done/error IRQ registers and an `irq` output; no AXI |
 | v26 | `tinynpu_axi_lite_wrapper` | row4 | 17393 | Passes descriptor `irq` through AXI4-Lite control wrapper; no full AXI memory master |
+| v27 | `tinynpu_dma_descriptor_wrapper` | row4 | 17839 | Adds memory/core timeout handling, `DMA_ERROR_CODE`, and verified error IRQ behavior |
+| v27 | `tinynpu_axi_lite_wrapper` | row4 | 18141 | AXI4-Lite wrapper with descriptor timeout/error IRQ path; no full AXI memory master |
 
 The descriptor-driven APB DMA-style testbench still exists as a higher-level
 simulation model. The synthesizable descriptor wrapper now has its own abstract
@@ -47,6 +49,12 @@ port remains the existing abstract ready/valid interface.
 v26 adds done IRQ tests to both descriptor-wrapper and AXI-Lite wrapper
 simulations. Error IRQ logic is present, but not stimulus-verified because the
 current DMA wrapper has no normal memory-error source.
+
+v27 adds real timeout/error stimulus. Descriptor-wrapper simulation verifies
+memory timeout, core timeout, error code reporting, error IRQ clear behavior,
+start blocked while error is sticky, and recovery after timeout. AXI-Lite
+simulation verifies memory-timeout error IRQ behavior through the AXI-Lite
+control path.
 
 Relative values use the default `row4` variant as the baseline. Synthesis is
 generic Yosys only, not technology-mapped PPA.

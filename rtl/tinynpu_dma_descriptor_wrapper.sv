@@ -21,6 +21,11 @@ module tinynpu_dma_descriptor_wrapper (
   input  logic        mem_ready,
 
   output logic        irq
+`ifdef TINYNPU_SIM_ASSERT
+  ,
+  input  logic        sim_force_core_done_timeout,
+  output logic        sim_mem_abort
+`endif
 );
 
   localparam logic [11:0] DMA_CTRL       = 12'h100;
@@ -29,8 +34,16 @@ module tinynpu_dma_descriptor_wrapper (
   localparam logic [11:0] DMA_B_EXT_BASE = 12'h10c;
   localparam logic [11:0] DMA_C_EXT_BASE = 12'h110;
   localparam logic [11:0] DMA_CONFIG     = 12'h114;
+  localparam logic [11:0] DMA_ERROR_CODE = 12'h118;
   localparam logic [11:0] DMA_IRQ_ENABLE = 12'h11c;
   localparam logic [11:0] DMA_IRQ_STATUS = 12'h120;
+
+  localparam logic [31:0] ERROR_NONE         = 32'd0;
+  localparam logic [31:0] ERROR_MEM_TIMEOUT  = 32'd1;
+  localparam logic [31:0] ERROR_CORE_TIMEOUT = 32'd2;
+
+  localparam logic [15:0] MEM_TIMEOUT_DEFAULT  = 16'd1024;
+  localparam logic [15:0] CORE_TIMEOUT_DEFAULT = 16'd1024;
 
   localparam logic [7:0] CORE_ADDR_CTRL   = 8'h00;
   localparam logic [7:0] CORE_ADDR_STATUS = 8'h04;
@@ -76,6 +89,7 @@ module tinynpu_dma_descriptor_wrapper (
   logic [31:0] dma_b_ext_base;
   logic [31:0] dma_c_ext_base;
   logic [31:0] dma_config;
+  logic [31:0] dma_error_code;
   logic [1:0]  dma_irq_enable;
   logic        done_irq_pending;
   logic        error_irq_pending;
@@ -87,6 +101,19 @@ module tinynpu_dma_descriptor_wrapper (
   logic [7:0]  internal_core_addr;
   logic [31:0] internal_core_wdata;
   logic [31:0] dma_i8_wdata;
+  logic [15:0] mem_timeout_count;
+  logic [15:0] core_timeout_count;
+  logic [15:0] mem_timeout_limit;
+  logic [15:0] core_timeout_limit;
+  logic        mem_timeout_hit;
+  logic        core_timeout_hit;
+  logic        core_done_observed;
+
+`ifdef TINYNPU_SIM_ASSERT
+  logic        sim_mem_abort_q;
+
+  assign sim_mem_abort = sim_mem_abort_q;
+`endif
 
   assign core_sel   = (paddr[11:8] == 4'h0);
   assign desc_sel   = (paddr >= 12'h100) && (paddr <= 12'h120);
@@ -102,6 +129,21 @@ module tinynpu_dma_descriptor_wrapper (
   assign prdata  = core_sel ? (dma_busy ? 32'h0 : core_prdata) : desc_prdata;
   assign irq     = (dma_irq_enable[0] && done_irq_pending) ||
                    (dma_irq_enable[1] && error_irq_pending);
+  assign mem_timeout_limit = (dma_config[15:0] == 16'h0) ?
+                             MEM_TIMEOUT_DEFAULT :
+                             dma_config[15:0];
+  assign core_timeout_limit = (dma_config[31:16] == 16'h0) ?
+                              CORE_TIMEOUT_DEFAULT :
+                              dma_config[31:16];
+  assign mem_timeout_hit = mem_valid && !mem_ready &&
+                           (mem_timeout_count >= (mem_timeout_limit - 16'd1));
+  assign core_done_observed = core_prdata[1]
+`ifdef TINYNPU_SIM_ASSERT
+                              && !sim_force_core_done_timeout
+`endif
+                              ;
+  assign core_timeout_hit = (dma_state == DMA_WAIT_CORE) &&
+                            (core_timeout_count >= (core_timeout_limit - 16'd1));
 
   assign core_psel    = internal_core_access ? 1'b1 : (psel && external_core_access);
   assign core_penable = internal_core_access ? 1'b1 : penable;
@@ -206,6 +248,7 @@ module tinynpu_dma_descriptor_wrapper (
       dma_b_ext_base <= 32'h0;
       dma_c_ext_base <= 32'h0;
       dma_config     <= 32'h0;
+      dma_error_code <= ERROR_NONE;
       dma_irq_enable <= 2'b00;
       done_irq_pending  <= 1'b0;
       error_irq_pending <= 1'b0;
@@ -213,7 +256,15 @@ module tinynpu_dma_descriptor_wrapper (
       dma_phase      <= PHASE_MEM_READ;
       dma_idx        <= 4'h0;
       dma_data_q     <= 32'h0;
+      mem_timeout_count  <= 16'h0;
+      core_timeout_count <= 16'h0;
+`ifdef TINYNPU_SIM_ASSERT
+      sim_mem_abort_q <= 1'b0;
+`endif
     end else begin
+`ifdef TINYNPU_SIM_ASSERT
+      sim_mem_abort_q <= 1'b0;
+`endif
       if (apb_access && desc_sel && pwrite) begin
         case (paddr)
           DMA_CTRL: begin
@@ -223,15 +274,17 @@ module tinynpu_dma_descriptor_wrapper (
             end
             if (pwdata[2]) begin
               dma_error <= 1'b0;
+              dma_error_code <= ERROR_NONE;
               error_irq_pending <= 1'b0;
             end
-            if (pwdata[0] && !dma_busy && (dma_state == DMA_IDLE)) begin
+            if (pwdata[0] && !dma_busy && !dma_error && (dma_state == DMA_IDLE)) begin
               dma_busy    <= 1'b1;
               dma_done    <= 1'b0;
-              dma_error   <= 1'b0;
               dma_state   <= DMA_LOAD_A;
               dma_phase   <= PHASE_MEM_READ;
               dma_idx     <= 4'h0;
+              mem_timeout_count  <= 16'h0;
+              core_timeout_count <= 16'h0;
             end
           end
           DMA_A_EXT_BASE: dma_a_ext_base <= pwdata;
@@ -242,6 +295,44 @@ module tinynpu_dma_descriptor_wrapper (
           default: begin
           end
         endcase
+      end
+
+      if (mem_timeout_hit) begin
+        dma_busy       <= 1'b0;
+        dma_done       <= 1'b1;
+        dma_error      <= 1'b1;
+        dma_error_code <= ERROR_MEM_TIMEOUT;
+        error_irq_pending <= 1'b1;
+        dma_state      <= DMA_IDLE;
+        dma_phase      <= PHASE_MEM_READ;
+        dma_idx        <= 4'h0;
+        mem_timeout_count  <= 16'h0;
+        core_timeout_count <= 16'h0;
+`ifdef TINYNPU_SIM_ASSERT
+        sim_mem_abort_q <= 1'b1;
+`endif
+      end else if (core_timeout_hit) begin
+        dma_busy       <= 1'b0;
+        dma_done       <= 1'b1;
+        dma_error      <= 1'b1;
+        dma_error_code <= ERROR_CORE_TIMEOUT;
+        error_irq_pending <= 1'b1;
+        dma_state      <= DMA_IDLE;
+        dma_phase      <= PHASE_MEM_READ;
+        dma_idx        <= 4'h0;
+        mem_timeout_count  <= 16'h0;
+        core_timeout_count <= 16'h0;
+      end else begin
+      if (mem_valid && !mem_ready) begin
+        mem_timeout_count <= mem_timeout_count + 16'd1;
+      end else begin
+        mem_timeout_count <= 16'h0;
+      end
+
+      if (dma_state == DMA_WAIT_CORE) begin
+        core_timeout_count <= core_timeout_count + 16'd1;
+      end else begin
+        core_timeout_count <= 16'h0;
       end
 
       case (dma_state)
@@ -303,7 +394,7 @@ module tinynpu_dma_descriptor_wrapper (
               dma_phase <= PHASE_CORE_CAPTURE;
             end
           end else if (dma_phase == PHASE_CORE_CAPTURE) begin
-            if (core_prdata[1]) begin
+            if (core_done_observed) begin
               dma_idx   <= 4'h0;
               dma_phase <= PHASE_CORE_GAP;
               dma_state <= DMA_STORE_C;
@@ -348,13 +439,16 @@ module tinynpu_dma_descriptor_wrapper (
 
         default: begin
           dma_busy    <= 1'b0;
+          dma_done    <= 1'b1;
           dma_error   <= 1'b1;
+          dma_error_code <= ERROR_CORE_TIMEOUT;
           error_irq_pending <= 1'b1;
           dma_state   <= DMA_IDLE;
           dma_phase   <= PHASE_MEM_READ;
           dma_idx     <= 4'h0;
         end
       endcase
+      end
 
       if (apb_access && !pwrite) begin
         if (core_sel && !dma_busy && core_pready) begin
@@ -367,6 +461,7 @@ module tinynpu_dma_descriptor_wrapper (
             DMA_B_EXT_BASE: desc_prdata <= dma_b_ext_base;
             DMA_C_EXT_BASE: desc_prdata <= dma_c_ext_base;
             DMA_CONFIG:     desc_prdata <= dma_config;
+            DMA_ERROR_CODE: desc_prdata <= dma_error_code;
             DMA_IRQ_ENABLE: desc_prdata <= {30'h0, dma_irq_enable};
             DMA_IRQ_STATUS: desc_prdata <= {30'h0, error_irq_pending, done_irq_pending};
             default:        desc_prdata <= 32'h0;

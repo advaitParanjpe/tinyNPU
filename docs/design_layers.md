@@ -89,6 +89,9 @@ from the core and writes them back through the abstract memory port.
 
 The memory port is word-addressed, single-beat, ready/valid, and not AXI. It has
 no bursts, byte strobes, outstanding transactions, or error response.
+The descriptor wrapper detects stalled memory transactions and stuck core
+completion waits with configurable timeouts, reports `DMA_ERROR_CODE`, and can
+raise done/error IRQs.
 The descriptor-wrapper testbench covers always-ready, fixed-latency, and
 deterministic random-backpressure memory behavior. The reusable
 `tinynpu_mem_port_assertions` checker verifies the abstract memory-port protocol

@@ -1,5 +1,17 @@
 # Changelog
 
+## v27
+
+- Added `DMA_ERROR_CODE` with memory timeout and core timeout error codes.
+- Added configurable memory/core timeout fields in `DMA_CONFIG`.
+- Added DMA abort/error behavior for stalled memory transactions and stuck core
+  completion waits.
+- Verified error IRQ assertion/clear, error code readback, start blocked while
+  error is sticky, and recovery after timeout.
+- Added AXI-Lite-level error IRQ coverage through a memory-timeout stimulus.
+- Kept full AXI memory master, bursts, MAC changes, and core/APB wrapper port
+  changes out of scope.
+
 ## v26
 
 - Added descriptor done/error IRQ enable and pending registers to

@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v26 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v27 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -20,6 +20,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - DMA memory-port fixed-latency and deterministic backpressure testing.
 - Reusable simulation-only memory-port assertions for the abstract DMA memory port.
 - DMA descriptor-wrapper performance reporting by memory mode and FSM phase.
+- DMA memory/core timeout handling with error codes and error IRQ verification.
 - Generic Yosys synthesis for all variants.
 - Lightweight repository checks for commit readiness.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
@@ -96,7 +97,7 @@ The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
 There is no full AXI memory master, SRAM macro, burst engine, or outstanding
-memory transaction support in v26. APB is available as an optional wrapper
+memory transaction support in v27. APB is available as an optional wrapper
 around the existing simple-bus core. A second optional wrapper adds
 synthesizable descriptor registers at `0x100`-`0x120`, while forwarding
 `0x000`-`0x0ff` to the APB core wrapper. Its DMA-control FSM runs
@@ -113,12 +114,12 @@ unchanged. The wrapper supports one outstanding read and one outstanding write,
 returns OKAY responses, has no bursts or IDs, and ignores partial writes unless
 `WSTRB == 4'b1111`.
 
-v26 adds an `irq` output to `tinynpu_dma_descriptor_wrapper` and passes it
-through `tinynpu_axi_lite_wrapper`. `DMA_IRQ_ENABLE[0]` enables done IRQs and
-`DMA_IRQ_STATUS[0]` reports sticky done pending. `DMA_CTRL.clear_done` clears
-both descriptor done and done IRQ pending. Error IRQ registers are present, but
-the current design has no normal memory-error source to stimulate them. Polling
-`DMA_STATUS` is unchanged.
+v26 added an `irq` output to `tinynpu_dma_descriptor_wrapper` and passes it
+through `tinynpu_axi_lite_wrapper`. v27 adds real timeout/error handling:
+`DMA_ERROR_CODE` reports memory timeout (`1`) or core timeout (`2`), and
+`DMA_CONFIG[15:0]` / `DMA_CONFIG[31:16]` configure memory/core timeout cycles
+with zero selecting defaults. Error IRQ behavior is now stimulus-verified.
+Polling `DMA_STATUS` is unchanged.
 
 ## Design Layers
 
@@ -202,6 +203,7 @@ The current self-checking Icarus simulation covers:
 - synthesizable DMA descriptor-wrapper tests for descriptor read/write, DMA memory movement, core launch, busy core-window blocking, and forwarded core access
 - AXI4-Lite control-wrapper tests for descriptor programming, forwarded core access, DMA launch/polling, channel stalls, invalid/unaligned access, and WSTRB behavior
 - descriptor-wrapper and AXI-Lite done IRQ assertion, pending status, clear behavior, and disabled-IRQ behavior
+- descriptor-wrapper memory/core timeout handling, error code reporting, error IRQ assertion/clear, and recovery after timeout
 - fixed-latency and deterministic random-backpressure tests for the descriptor wrapper memory port
 - reusable memory-port assertions for valid hold, stable stalled requests, and X/Z checks
 - descriptor-wrapper DMA performance reporting for `always_ready`, `fixed_latency`, and `random_backpressure` memory modes

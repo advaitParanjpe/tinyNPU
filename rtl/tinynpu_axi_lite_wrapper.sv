@@ -34,6 +34,10 @@ module tinynpu_axi_lite_wrapper (
   input  logic        mem_ready,
 
   output logic        irq
+`ifdef TINYNPU_SIM_ASSERT
+  ,
+  output logic        sim_mem_abort
+`endif
 );
 
   localparam logic [1:0] AXI_RESP_OKAY = 2'b00;
@@ -225,6 +229,11 @@ module tinynpu_axi_lite_wrapper (
     .mem_rdata (mem_rdata),
     .mem_ready (mem_ready),
     .irq       (irq)
+`ifdef TINYNPU_SIM_ASSERT
+    ,
+    .sim_force_core_done_timeout (1'b0),
+    .sim_mem_abort               (sim_mem_abort)
+`endif
   );
 
 endmodule
