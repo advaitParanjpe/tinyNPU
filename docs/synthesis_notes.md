@@ -10,6 +10,10 @@ The flow reads the SystemVerilog RTL, sets `tinynpu_top` as the top module, runs
 generic synthesis cleanup and optimization passes, writes a synthesized Verilog
 netlist, and emits a simple area-style statistics report.
 
+The v14 flow includes the behavioral A/B int8 scratchpad modules and C int32
+result-buffer module. This is still generic register-based synthesis, not SRAM
+macro mapping.
+
 Variant-specific outputs are written under `build/synth/<variant>/`:
 
 - `yosys.log`

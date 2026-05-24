@@ -1,12 +1,12 @@
 # tinyNPU
 
-tinyNPU v13 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v14 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
 
 - Fixed 4x4 signed int8 matrix multiply: `C = A x B`, with signed int32 C results.
-- Simple always-ready register bus with CTRL/STATUS and A/B/C storage.
+- Simple always-ready register bus with CTRL/STATUS, A/B scratchpads, and C result storage.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
 - Directed, edge-case, bus protocol, control/status, and deterministic random golden-model verification.
@@ -59,10 +59,10 @@ simple register bus
         |
 tinynpu_top
   |-- CTRL/STATUS
-  |-- A/B input storage
+  |-- A/B int8 scratchpads
   |-- MAC variant wrapper
   |     |-- serial / row4 / full16
-  |-- C result storage
+  |-- C int32 result buffer
 ```
 
 For each row, the MAC array clears four accumulators, broadcasts `A[row][k]`
@@ -77,7 +77,10 @@ The `full16` variant updates all 16 C accumulators in parallel for each `k`,
 then commits the full C matrix. It is an upper-parallelism baseline for the
 fixed 4x4 design.
 
-There is no AXI, APB, DMA, SRAM macro, or external memory interface in v13.
+The A/B scratchpads and C result buffer are separate behavioral RTL modules.
+They are still register-based storage, not SRAM macros.
+
+There is no AXI, APB, DMA, SRAM macro, or external memory interface in v14.
 
 ## Register Map
 
@@ -227,3 +230,4 @@ Human-readable notes live in:
 - `docs/coverage.md`
 - `docs/bus_protocol.md`
 - `docs/development.md`
+- `docs/memory_architecture.md`

@@ -14,6 +14,8 @@ REQUIRED_FILES = (
     "Makefile",
     "rtl/tinynpu_top.sv",
     "rtl/tinynpu_mac_array.sv",
+    "rtl/tinynpu_scratchpad_i8.sv",
+    "rtl/tinynpu_result_buffer_i32.sv",
     "tb/tb_tinynpu_top.sv",
     "model/golden_matmul.py",
     "sim/run_sim.py",
@@ -87,6 +89,13 @@ def check_required_files(runner):
 
 
 def check_local_artifacts(runner):
+    for path in REPO_ROOT.rglob(".DS_Store"):
+        if ".git" not in path.parts:
+            path.unlink(missing_ok=True)
+    for path in sorted(REPO_ROOT.rglob("__pycache__"), reverse=True):
+        if ".git" not in path.parts:
+            shutil.rmtree(path)
+
     ds_store = [path.relative_to(REPO_ROOT) for path in REPO_ROOT.rglob(".DS_Store") if ".git" not in path.parts]
     pycache = [path.relative_to(REPO_ROOT) for path in REPO_ROOT.rglob("__pycache__") if ".git" not in path.parts]
 

@@ -3,6 +3,7 @@
 ## Tested Now
 
 - 4x4 signed int8 matrix multiply through the public register bus
+- A/B scratchpad readback and C result-buffer readback through the bus
 - Serial, row4, and full16 MAC datapaths with fixed row-major C output ordering
 - Directed functional cases: identity, all zeros, all ones, mixed signed values
 - Signed arithmetic edge cases: max positive, min negative times positive, alternating extremes, sparse single nonzero
@@ -41,6 +42,7 @@
 - Randomized bus timing with backpressure, since `bus_ready` is currently always high
 - Larger matrix sizes or configurable dimensions
 - Exhaustive signed int8 operand coverage
+- SRAM macro behavior or memory timing
 - Formal checks
 - Assertion coverage
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## v14
+
+- Refactored A/B matrix storage into reusable int8 scratchpad modules.
+- Refactored C result storage into a reusable int32 result-buffer module.
+- Preserved the public bus interface, address map, and MAC variant behavior.
+
 ## v13
 
 - Added `scripts/check_repo.py` for lightweight repository quality checks.

@@ -3,6 +3,10 @@
 This document tracks possible datapath variants. The default RTL remains the
 4-lane row MAC.
 
+All variants use the same top-level bus, A/B int8 scratchpads, C int32 result
+buffer, and `tinynpu_mac_array` wrapper. Only the internal MAC datapath selected
+by compile-time define changes.
+
 ## Serial MAC Baseline
 
 - Computes one C element at a time.
