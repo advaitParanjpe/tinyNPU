@@ -1,0 +1,11 @@
+build/
+*.vcd
+*.vvp
+*.fst
+__pycache__/
+*.pyc
+.DS_Store
+*~
+*.swp
+*.swo
+.#*

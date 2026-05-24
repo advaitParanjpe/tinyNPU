@@ -1,0 +1,43 @@
+# tinyNPU Verification Plan
+
+## Tested Now
+
+- 4x4 signed int8 matrix multiply through the public register bus
+- Serial, row4, and full16 MAC datapaths with fixed row-major C output ordering
+- Directed functional cases: identity, all zeros, all ones, mixed signed values
+- Signed arithmetic edge cases: max positive, min negative times positive, alternating extremes, sparse single nonzero
+- Control/status behavior: start while busy, sticky done, clear done, new start after done
+- Reset behavior, including reset during an active operation
+- Invalid bus behavior: unmapped reads return zero and unmapped writes are ignored
+- Deterministic random golden-model tests generated from a seed
+- Lightweight simulation checkers enabled by `TINYNPU_SIM_ASSERT`
+- Bounded latency from accepted start to done
+
+## Assertions and Checkers
+
+- Busy/done mutual exclusion
+- Start writes while busy are ignored
+- Accepted starts must reach done within 200 cycles
+- Reset clears busy/done status
+- C output storage remains stable while done is sticky and no new start occurs
+- Testbench latency accounting reports accepted-start-to-done latency
+- Current observed max latencies are 66 cycles for `serial`, 26 cycles for
+  `row4`, and 8 cycles for `full16`, bounded by a 200-cycle checker
+
+## Not Tested Yet
+
+- Functional coverage metrics
+- Randomized bus timing with backpressure, since `bus_ready` is currently always high
+- Larger matrix sizes or configurable dimensions
+- Exhaustive signed int8 operand coverage
+- Formal checks
+- Assertion coverage
+
+## Future Ideas
+
+- Add coverage bins for operand extremes, status transitions, and address regions
+- Add constrained-random bus transactions around valid and invalid addresses
+- Add formal verification for control/status invariants
+- Add assertion coverage reporting under a simulator that supports it
+- Add regression seeds and a small seed sweep target
+- Extend the golden-model flow when larger matrix sizes are introduced

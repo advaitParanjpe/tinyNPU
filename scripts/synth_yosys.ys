@@ -1,0 +1,21 @@
+read_verilog -sv rtl/tinynpu_pkg.sv
+read_verilog -sv rtl/tinynpu_mac_serial.sv
+read_verilog -sv rtl/tinynpu_mac_row4.sv
+read_verilog -sv rtl/tinynpu_mac_full16.sv
+read_verilog -sv rtl/tinynpu_mac_array.sv
+read_verilog -sv rtl/tinynpu_top.sv
+
+hierarchy -check -top tinynpu_top
+proc
+check
+opt
+fsm
+opt
+memory
+opt
+techmap
+opt
+check
+
+tee -o @SYNTH_DIR@/stat.txt stat
+write_verilog -noattr @SYNTH_DIR@/tinynpu_top_synth.v

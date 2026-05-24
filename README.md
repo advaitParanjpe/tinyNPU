@@ -1,0 +1,188 @@
+# tinyNPU
+
+tinyNPU v10 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+matrix multiply accelerator tile with a simple testbench-friendly register bus.
+
+## Current Status
+
+- Fixed 4x4 signed int8 matrix multiply: `C = A x B`, with signed int32 C results.
+- Simple always-ready register bus with CTRL/STATUS and A/B/C storage.
+- Default MAC variant is `row4`, a four-lane row MAC FSM.
+- Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
+- Directed, edge-case, control/status, and deterministic random golden-model verification.
+- Lightweight simulation assertions/checkers and bounded-latency checking.
+- Generic Yosys synthesis for all variants.
+- `make compare` runs simulation, synthesis, and result capture for all variants.
+
+## Requirements
+
+- Python 3
+- Icarus Verilog (`iverilog` and `vvp`) for simulation
+- Yosys for synthesis
+- `make`
+
+## Run
+
+```sh
+make vectors
+make golden
+make sim
+make synth
+make results
+make sim-serial
+make synth-serial
+make results-serial
+make sim-full16
+make synth-full16
+make results-full16
+make compare
+```
+
+The simulation builds under `build/` and writes a VCD waveform to
+`build/tinynpu_top.vcd`.
+
+`make sim` regenerates random vectors before compiling, using the default seed
+and test count from `sim/run_sim.py`.
+
+## Architecture
+
+```text
+testbench/Python vectors
+        |
+simple register bus
+        |
+tinynpu_top
+  |-- CTRL/STATUS
+  |-- A/B input storage
+  |-- MAC variant wrapper
+  |     |-- serial / row4 / full16
+  |-- C result storage
+```
+
+For each row, the MAC array clears four accumulators, broadcasts `A[row][k]`
+across four lanes, multiplies by `B[k][0..3]`, accumulates for `k = 0..3`, and
+writes the full C row. This `row4` variant is the default.
+
+The `serial` variant computes one multiply-accumulate per cycle and is selected
+only by compile-time define through the scripts. The public bus interface is the
+same for all variants.
+
+The `full16` variant updates all 16 C accumulators in parallel for each `k`,
+then commits the full C matrix. It is an upper-parallelism baseline for the
+fixed 4x4 design.
+
+There is no AXI, APB, DMA, SRAM macro, or external memory interface in v10.
+
+## Register Map
+
+All matrix entries are row-major. `bus_ready` is always asserted.
+
+| Address | Name | Description |
+| --- | --- | --- |
+| `0x00` | `CTRL` | bit 0: write `1` to start when not busy; bit 1: write `1` to clear sticky done |
+| `0x04` | `STATUS` | bit 0: busy; bit 1: done |
+| `0x10`-`0x4c` | `A[0]`-`A[15]` | one signed int8 per 32-bit word, stored in bits `[7:0]` |
+| `0x50`-`0x8c` | `B[0]`-`B[15]` | one signed int8 per 32-bit word, stored in bits `[7:0]` |
+| `0x90`-`0xcc` | `C[0]`-`C[15]` | signed int32 result words, read-only from the bus |
+
+`STATUS.done` stays asserted after a completed operation until software writes
+`CTRL.clear_done` or starts a new operation. C storage updates when the MAC array
+finishes and remains readable until the next completed operation.
+
+Additional bus/control behavior:
+
+- `CTRL.start` is accepted only when the accelerator is not busy.
+- Writes to `CTRL.start` while busy are ignored and do not restart or corrupt the in-flight operation.
+- Reset clears busy/done/control state and zeroes the internal A/B/C storage.
+- Invalid or unmapped reads return `0`.
+- Invalid or unmapped writes are ignored.
+
+## Random Vectors
+
+Random tests are generated deterministically from a seed by
+`model/golden_matmul.py`. The generated files are intentionally kept in the repo
+for now because they are small and make the default regression visible:
+
+- `tests/test_vectors/generated_matmul_tests.json`
+- `tests/test_vectors/generated_matmul_tests.svh`
+
+Generate the default 50-test set:
+
+```sh
+make vectors
+```
+
+Generate a custom set through the simulator wrapper:
+
+```sh
+python3 sim/run_sim.py --num-random-tests 100 --seed 7
+```
+
+The SystemVerilog testbench includes the generated `.svh` file and runs every
+generated case through the same register bus path as the directed tests.
+
+## Verification
+
+The current self-checking Icarus simulation covers:
+
+- directed functional tests: identity, zeros, ones, mixed signed values
+- signed arithmetic edge cases: `127`, `-128`, alternating extremes, sparse nonzero
+- control/status behavior: start while busy, sticky done, clear done, new start after done
+- reset mid-operation recovery
+- invalid bus read/write behavior
+- 50 deterministic random golden-model tests by default
+- lightweight checkers compiled with `-DTINYNPU_SIM_ASSERT`
+- bounded operation latency with `MAX_OPERATION_CYCLES = 200`
+
+`make sim` enables the checkers by default. The default `row4` regression
+currently observes a 26-cycle accepted-start-to-done latency. The `serial`
+baseline observes 66 cycles. The `full16` variant observes 8 cycles.
+
+The simulation checkers cover:
+
+- busy and done are mutually exclusive
+- a start write while busy is not accepted
+- every accepted start reaches done within the latency bound
+- reset clears busy/done status
+- C storage remains stable while done is sticky and no new start is accepted
+
+## Synthesis
+
+Run generic Yosys synthesis:
+
+```sh
+make synth
+make synth-serial
+make synth-full16
+```
+
+Variant-specific outputs are written under:
+
+- `build/synth/row4/`
+- `build/synth/serial/`
+- `build/synth/full16/`
+
+This is a generic Yosys synthesis check, not a technology-mapped PPA flow. It
+does not use a standard-cell library, timing constraints, floorplanning, or
+place-and-route yet.
+
+## Results Artifacts
+
+Structured run artifacts are written under `build/`:
+
+- `build/sim/sim_summary.json`
+- `build/synth/synth_summary.json`
+- `build/results/results_summary.json`
+
+Variant-specific summaries are written under:
+
+- `build/sim/row4/`, `build/sim/serial/`, and `build/sim/full16/`
+- `build/synth/row4/`, `build/synth/serial/`, and `build/synth/full16/`
+
+`make results` records the default `row4` variant. `make results-serial` records
+the serial baseline. `make results-full16` records the full16 variant.
+`make compare` runs and records all three.
+Human-readable notes live in:
+
+- `docs/results.md`
+- `docs/architecture_variants.md`
