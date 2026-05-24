@@ -11,6 +11,8 @@
 - Simple bus protocol behavior: always-ready response, A/B readback,
   C read-only storage, ignored CTRL bits, invalid access handling, and unaligned
   access handling
+- Focused APB wrapper behavior: identity, mixed signed, invalid/unaligned
+  access, C read-only behavior, start while busy, and reset
 - Reset behavior, including reset during an active operation
 - Invalid bus behavior: unmapped reads return zero and unmapped writes are ignored
 - Deterministic random golden-model tests generated from a seed
@@ -39,6 +41,7 @@
 ## Not Tested Yet
 
 - Functional coverage metrics
+- Full APB protocol coverage
 - Randomized bus timing with backpressure, since `bus_ready` is currently always high
 - Larger matrix sizes or configurable dimensions
 - Exhaustive signed int8 operand coverage

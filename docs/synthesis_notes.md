@@ -4,7 +4,8 @@
 
 `make synth` runs a basic Yosys synthesis flow for `tinynpu_top` using the
 default `row4` MAC variant. `make synth-serial` and `make synth-full16` run the
-same flow for the other MAC variants.
+same flow for the other MAC variants. `make synth-apb` synthesizes the optional
+APB wrapper around the default `row4` core.
 
 The flow reads the SystemVerilog RTL, sets `tinynpu_top` as the top module, runs
 generic synthesis cleanup and optimization passes, writes a synthesized Verilog
@@ -19,6 +20,7 @@ Variant-specific outputs are written under `build/synth/<variant>/`:
 - `yosys.log`
 - `stat.txt`
 - `tinynpu_top_synth.v`
+- `tinynpu_apb_wrapper_synth.v` for `build/synth/apb/`
 - `synth_summary.json`
 
 ## Current Limitations

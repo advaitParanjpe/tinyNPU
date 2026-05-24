@@ -3,6 +3,10 @@
 tinyNPU uses a minimal testbench-friendly register bus. It is intentionally not
 AXI, APB, or any other standard SoC bus.
 
+An optional APB-lite-style wrapper is documented separately in
+`docs/apb_wrapper.md`. The wrapper translates APB transfers into this simple bus
+without changing `tinynpu_top`.
+
 ## Signals
 
 - `bus_ready` is always `1` in the current implementation.

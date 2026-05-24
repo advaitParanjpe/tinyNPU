@@ -50,8 +50,8 @@ def parse_stats(text):
 
 
 def main():
-    if len(sys.argv) not in (2, 5, 6):
-        print("usage: parse_yosys_stats.py <stat.txt> [<yosys.log> <netlist.v> <summary.json> [mac_variant]]", file=sys.stderr)
+    if len(sys.argv) not in (2, 5, 6, 7):
+        print("usage: parse_yosys_stats.py <stat.txt> [<yosys.log> <netlist.v> <summary.json> [mac_variant [top_module]]]", file=sys.stderr)
         return 2
 
     path = Path(sys.argv[1])
@@ -60,9 +60,11 @@ def main():
         return 1
 
     summary, cells = parse_stats(path.read_text())
+    top_module = sys.argv[6] if len(sys.argv) == 7 else "tinynpu_top"
+
     summary_json = {
         "status": "passed",
-        "top_module": "tinynpu_top",
+        "top_module": top_module,
         "mac_variant": sys.argv[5] if len(sys.argv) == 6 else "row4",
         "yosys_log_path": str(Path(sys.argv[2])) if len(sys.argv) >= 5 else "build/synth/yosys.log",
         "stat_report_path": str(path),

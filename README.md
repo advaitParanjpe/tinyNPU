@@ -1,12 +1,13 @@
 # tinyNPU
 
-tinyNPU v14 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v15 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
 
 - Fixed 4x4 signed int8 matrix multiply: `C = A x B`, with signed int32 C results.
 - Simple always-ready register bus with CTRL/STATUS, A/B scratchpads, and C result storage.
+- Optional APB-lite-style wrapper around the existing simple-bus core.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
 - Directed, edge-case, bus protocol, control/status, and deterministic random golden-model verification.
@@ -30,7 +31,9 @@ make vectors
 make check
 make golden
 make sim
+make sim-apb
 make synth
+make synth-apb
 make results
 make sim-serial
 make synth-serial
@@ -80,7 +83,8 @@ fixed 4x4 design.
 The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
-There is no AXI, APB, DMA, SRAM macro, or external memory interface in v14.
+There is no AXI, DMA, SRAM macro, or external memory interface in v15. APB is
+available only as an optional wrapper around the existing simple-bus core.
 
 ## Register Map
 
@@ -146,6 +150,7 @@ The current self-checking Icarus simulation covers:
 - signed arithmetic edge cases: `127`, `-128`, alternating extremes, sparse nonzero
 - control/status behavior: start while busy, sticky done, clear done, new start after done
 - bus protocol behavior: always-ready signaling, A/B readback, C read-only storage, ignored CTRL bits, unaligned access handling
+- focused APB wrapper tests for identity, mixed signed, invalid/unaligned access, C read-only behavior, start while busy, and reset
 - reset mid-operation recovery
 - invalid bus read/write behavior
 - 50 deterministic random golden-model tests by default
@@ -171,6 +176,7 @@ Run generic Yosys synthesis:
 
 ```sh
 make synth
+make synth-apb
 make synth-serial
 make synth-full16
 ```
@@ -178,6 +184,7 @@ make synth-full16
 Variant-specific outputs are written under:
 
 - `build/synth/row4/`
+- `build/synth/apb/`
 - `build/synth/serial/`
 - `build/synth/full16/`
 
@@ -231,3 +238,4 @@ Human-readable notes live in:
 - `docs/bus_protocol.md`
 - `docs/development.md`
 - `docs/memory_architecture.md`
+- `docs/apb_wrapper.md`

@@ -1,5 +1,10 @@
 # Changelog
 
+## v15
+
+- Added optional APB-lite-style wrapper around `tinynpu_top`.
+- Added focused APB wrapper simulation and generic Yosys synthesis targets.
+
 ## v14
 
 - Refactored A/B matrix storage into reusable int8 scratchpad modules.

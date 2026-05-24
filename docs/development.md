@@ -14,6 +14,13 @@ Run the default simulation while editing RTL or tests:
 make sim
 ```
 
+Run the APB wrapper smoke regression when touching integration logic:
+
+```sh
+make sim-apb
+make synth-apb
+```
+
 Run the full variant comparison before commit:
 
 ```sh
@@ -34,7 +41,8 @@ Use the longer precommit target when a change is ready:
 make precommit
 ```
 
-This runs `make check`, `make golden`, and `make compare`.
+This runs `make check`, `make golden`, `make compare`, `make sim-apb`, and
+`make synth-apb`.
 
 ## Tools
 
