@@ -28,6 +28,8 @@ REQUIRED_FILES = (
     "sim/run_dma_descriptor_wrapper_sim.py",
     "docs/bus_protocol.md",
     "docs/coverage.md",
+    "docs/design_layers.md",
+    "docs/source_manifest.md",
     "docs/dma_model.md",
     "docs/dma_descriptor_wrapper.md",
     "docs/results.md",

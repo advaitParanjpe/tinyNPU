@@ -3,6 +3,10 @@
 This document tracks possible datapath variants. The default RTL remains the
 4-lane row MAC.
 
+See `docs/design_layers.md` for how these datapaths fit under the core,
+optional APB wrapper, DMA descriptor wrapper, and testbench-only DMA-style
+model.
+
 All variants use the same top-level bus, A/B int8 scratchpads, C int32 result
 buffer, and `tinynpu_mac_array` wrapper. Only the internal MAC datapath selected
 by compile-time define changes.

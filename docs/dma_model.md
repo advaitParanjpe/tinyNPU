@@ -17,8 +17,8 @@ then the descriptor model performs the movement sequence:
 7. The model reads C through APB and stores it back into external memory.
 8. The descriptor model sets `DMA_STATUS.done`.
 
-These descriptor registers are testbench-side model state only. v18 also has an
-optional synthesizable descriptor-register wrapper, documented in
+These descriptor registers are testbench-side model state only. The repo also
+has an optional synthesizable DMA descriptor wrapper, documented in
 `docs/dma_descriptor_wrapper.md`, but that wrapper does not move memory.
 
 ## Descriptor Register Map

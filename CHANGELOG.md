@@ -1,5 +1,13 @@
 # Changelog
 
+## v19
+
+- Added design-layer documentation separating synthesizable RTL, optional
+  wrappers, and testbench-only DMA-style models.
+- Added a source manifest and concise roadmap.
+- Added `make help` target for common development, simulation, and synthesis
+  commands.
+
 ## v18
 
 - Added optional synthesizable `tinynpu_dma_descriptor_wrapper`.

@@ -14,8 +14,8 @@ Run the default simulation while editing RTL or tests:
 make sim
 ```
 
-Run the APB wrapper and descriptor-driven DMA-model smoke regressions when
-touching integration logic:
+Run the APB wrapper, DMA descriptor wrapper, and DMA-style model smoke
+regressions when touching integration logic:
 
 ```sh
 make sim-apb

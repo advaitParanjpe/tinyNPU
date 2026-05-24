@@ -31,7 +31,7 @@ existing tinyNPU 8-bit APB address space.
 Invalid descriptor reads return `0`. Invalid descriptor writes are ignored.
 `pslverr` remains `0`.
 
-## v18 Behavior
+## Current Behavior
 
 When software writes `DMA_CTRL.start` while idle, the wrapper sets
 `DMA_STATUS.busy` for four cycles and then sets `DMA_STATUS.done`. No external
@@ -45,12 +45,13 @@ Forwarded core reads preserve the one-wait-state read behavior of
 `tinynpu_apb_wrapper`. Descriptor-register accesses are ready in the APB access
 phase.
 
-## v17 vs v18
+## Testbench Model vs Synthesizable Wrapper
 
-- v17 descriptor registers lived only in `tb/tb_tinynpu_apb_dma_model.sv`.
-- v18 descriptor registers are synthesizable RTL in
+- The DMA-style model in `tb/tb_tinynpu_apb_dma_model.sv` is testbench-only and
+  performs simulated memory movement.
+- The DMA descriptor wrapper is synthesizable RTL in
   `tinynpu_dma_descriptor_wrapper`.
-- v18 still does not implement DMA memory movement.
+- The DMA descriptor wrapper still does not implement real DMA memory movement.
 
 ## Future Path
 

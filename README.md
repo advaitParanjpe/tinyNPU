@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v18 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v19 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -9,7 +9,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Simple always-ready register bus with CTRL/STATUS, A/B scratchpads, and C result storage.
 - Optional APB-lite-style wrapper around the existing simple-bus core.
 - Optional synthesizable DMA descriptor wrapper around the APB core wrapper.
-- DMA-style APB system simulation model with testbench-side descriptor registers.
+- DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
 - Directed, edge-case, bus protocol, control/status, and deterministic random golden-model verification.
@@ -88,11 +88,24 @@ fixed 4x4 design.
 The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
-There is no AXI, DMA data mover, SRAM macro, or real external memory interface
-in v18. APB is available as an optional wrapper around the existing simple-bus
+There is no AXI, real DMA data mover, SRAM macro, or real external memory interface
+in v19. APB is available as an optional wrapper around the existing simple-bus
 core. A second optional wrapper adds synthesizable descriptor registers at
 `0x100`-`0x11f`, while forwarding `0x000`-`0x0ff` to the APB core wrapper. The
-DMA-style flow still moves data only in simulation.
+DMA-style memory movement is currently testbench-only.
+
+## Design Layers
+
+The repo separates synthesizable RTL from optional wrappers and testbench-only
+models:
+
+- MAC datapaths and `tinynpu_top` are synthesizable accelerator RTL.
+- `tinynpu_apb_wrapper` is a synthesizable APB-lite-style adapter.
+- `tinynpu_dma_descriptor_wrapper` is a synthesizable descriptor/status wrapper.
+- `tb/tb_tinynpu_apb_dma_model.sv` is a testbench-only DMA-style model.
+
+See `docs/design_layers.md` and `docs/source_manifest.md` for the full layer and
+source breakdown.
 
 ## Register Map
 
@@ -249,6 +262,9 @@ the serial baseline. `make results-full16` records the full16 variant.
 Human-readable notes live in:
 
 - `docs/results.md`
+- `docs/design_layers.md`
+- `docs/source_manifest.md`
+- `docs/roadmap.md`
 - `docs/architecture_variants.md`
 - `docs/coverage.md`
 - `docs/bus_protocol.md`
