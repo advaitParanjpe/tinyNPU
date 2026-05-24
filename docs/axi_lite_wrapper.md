@@ -9,6 +9,10 @@ This is only a control wrapper. The DMA data path still uses the existing
 abstract ready/valid external memory port. There is no full AXI memory master.
 The wrapper also passes through the descriptor wrapper's `irq` output.
 
+v28 adds `tinynpu_axi_read_dma_wrapper` as a separate optional block for AXI
+read-master A/B loads. This AXI-Lite wrapper remains the control-only path and
+is unchanged.
+
 ## Layering
 
 ```text

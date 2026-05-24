@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v27 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v28 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -10,6 +10,8 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Optional APB-lite-style wrapper around the existing simple-bus core.
 - Optional synthesizable DMA descriptor wrapper with a DMA-control FSM and abstract external memory port.
 - Optional AXI4-Lite control wrapper around the DMA descriptor wrapper.
+- Optional AXI read-DMA wrapper with AXI4-Lite control, single-beat AXI reads
+  for A/B loads, and an abstract write port for C stores.
 - DMA done IRQ support on the descriptor wrapper and AXI4-Lite wrapper.
 - DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
@@ -21,6 +23,8 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Reusable simulation-only memory-port assertions for the abstract DMA memory port.
 - DMA descriptor-wrapper performance reporting by memory mode and FSM phase.
 - DMA memory/core timeout handling with error codes and error IRQ verification.
+- AXI read-DMA verification for AR backpressure, delayed RVALID, RRESP errors,
+  timeout handling, and done IRQ behavior.
 - Generic Yosys synthesis for all variants.
 - Lightweight repository checks for commit readiness.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
@@ -43,10 +47,12 @@ make sim-apb
 make sim-apb-dma
 make sim-dma-desc
 make sim-axi-lite
+make sim-axi-read-dma
 make synth
 make synth-apb
 make synth-dma-desc
 make synth-axi-lite
+make synth-axi-read-dma
 make results
 make sim-serial
 make synth-serial
@@ -96,8 +102,8 @@ fixed 4x4 design.
 The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
-There is no full AXI memory master, SRAM macro, burst engine, or outstanding
-memory transaction support in v27. APB is available as an optional wrapper
+There is no full AXI write master, SRAM macro, burst engine, or outstanding
+memory transaction support in v28. APB is available as an optional wrapper
 around the existing simple-bus core. A second optional wrapper adds
 synthesizable descriptor registers at `0x100`-`0x120`, while forwarding
 `0x000`-`0x0ff` to the APB core wrapper. Its DMA-control FSM runs
@@ -121,6 +127,13 @@ through `tinynpu_axi_lite_wrapper`. v27 adds real timeout/error handling:
 with zero selecting defaults. Error IRQ behavior is now stimulus-verified.
 Polling `DMA_STATUS` is unchanged.
 
+v28 adds `tinynpu_axi_read_dma_wrapper`, an optional AXI4-Lite controlled wrapper
+with an AXI4 read master for A/B loads. It uses single-beat reads only
+(`ARLEN = 0`) and converts descriptor word addresses to AXI byte addresses with
+`<< 2`. C stores still use a separate abstract write port. RRESP errors report
+`DMA_ERROR_CODE = 3`; handshake timeouts use error code `1`. There is still no
+AXI write master and no burst support.
+
 ## Design Layers
 
 The repo separates synthesizable RTL from optional wrappers and testbench-only
@@ -130,6 +143,7 @@ models:
 - `tinynpu_apb_wrapper` is a synthesizable APB-lite-style adapter.
 - `tinynpu_dma_descriptor_wrapper` is a synthesizable descriptor/status wrapper with a DMA-control FSM and abstract memory port.
 - `tinynpu_axi_lite_wrapper` is a synthesizable AXI4-Lite control wrapper around the DMA descriptor wrapper.
+- `tinynpu_axi_read_dma_wrapper` is a synthesizable AXI4-Lite controlled wrapper with an AXI read master for A/B loads and an abstract C write port.
 - `tb/tb_tinynpu_apb_dma_model.sv` is a testbench-only DMA-style model.
 
 See `docs/design_layers.md` and `docs/source_manifest.md` for the full layer and
@@ -202,6 +216,7 @@ The current self-checking Icarus simulation covers:
 - focused APB wrapper tests for identity, mixed signed, invalid/unaligned access, C read-only behavior, start while busy, and reset
 - synthesizable DMA descriptor-wrapper tests for descriptor read/write, DMA memory movement, core launch, busy core-window blocking, and forwarded core access
 - AXI4-Lite control-wrapper tests for descriptor programming, forwarded core access, DMA launch/polling, channel stalls, invalid/unaligned access, and WSTRB behavior
+- AXI read-DMA wrapper tests for AXI A/B loads, abstract C stores, AR backpressure, delayed RVALID, RRESP errors, timeout handling, and done IRQ behavior
 - descriptor-wrapper and AXI-Lite done IRQ assertion, pending status, clear behavior, and disabled-IRQ behavior
 - descriptor-wrapper memory/core timeout handling, error code reporting, error IRQ assertion/clear, and recovery after timeout
 - fixed-latency and deterministic random-backpressure tests for the descriptor wrapper memory port

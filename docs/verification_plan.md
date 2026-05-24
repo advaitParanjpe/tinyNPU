@@ -31,6 +31,9 @@
 - DMA timeout/error behavior: memory timeout, core timeout, `DMA_ERROR_CODE`,
   error IRQ assertion/clear, start blocked while error is sticky, and recovery
   after timeout
+- AXI read-DMA behavior: AXI single-beat reads for A/B loads, abstract C
+  store-back, AR backpressure, delayed RVALID, RRESP error code reporting,
+  timeout handling, and done IRQ behavior
 - Descriptor-driven DMA-style APB system-flow behavior: descriptor programming,
   external-memory load of A/B, accelerator start, STATUS.done polling,
   C store-back, back-to-back operations, start while descriptor model is busy,
@@ -66,8 +69,10 @@
 
 - Functional coverage metrics
 - Full APB protocol coverage
-- Full AXI/AHB DMA data-mover behavior
-- Memory bus error responses other than timeout
+- Full AXI/AHB read/write DMA data-mover behavior
+- AXI write master behavior
+- Burst transfers and multiple outstanding memory transactions
+- Memory bus error responses beyond AXI read RRESP and timeout
 - Longer memory-port backpressure seed sweeps
 - Randomized bus timing with backpressure, since `bus_ready` is currently always high
 - Larger matrix sizes or configurable dimensions

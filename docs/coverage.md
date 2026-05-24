@@ -58,6 +58,9 @@ path, number of passed coverage categories, and known gap count.
   memory timeout, core timeout, error IRQ, error code readback, start blocked
   while error is sticky, and recovery.
 - AXI-Lite memory-timeout error IRQ smoke test through `make sim-axi-lite`.
+- AXI read-DMA smoke tests through `make sim-axi-read-dma`, including AXI A/B
+  loads, abstract C store-back, ARREADY backpressure, delayed RVALID, RRESP
+  error handling, timeout handling, and done IRQ behavior.
 - Reusable memory-port assertions are compiled into `make sim-dma-desc` with
   `TINYNPU_SIM_ASSERT`.
 - DMA descriptor-wrapper performance reporting emits per-mode cycle summaries
@@ -66,7 +69,8 @@ path, number of passed coverage categories, and known gap count.
 ## Known Gaps
 
 - No full AXI/APB protocol coverage yet.
-- No AXI/AHB DMA protocol coverage yet.
+- No AXI write-master protocol coverage yet.
+- No burst or multiple-outstanding AXI coverage yet.
 - No SRAM macro or memory timing coverage yet.
 - No formal proof yet.
 - Only fixed 4x4 matrix size currently tested.

@@ -19,6 +19,11 @@ not a full AXI memory master. v26 adds descriptor done/error IRQ registers and
 an `irq` output to the descriptor and AXI-Lite wrappers. v27 adds timeout
 counters, `DMA_ERROR_CODE`, and timeout/error control logic.
 
+`make synth-axi-read-dma` synthesizes the optional AXI read-DMA wrapper. This
+top has AXI4-Lite control, a single-beat AXI4 read master for loading A/B, an
+abstract write port for C results, and the wrapped tinyNPU core. It has no AXI
+write master, no burst support, and no multiple outstanding reads.
+
 v22 added memory-port backpressure verification without changing this RTL. v23
 adds `tinynpu_mem_port_assertions` for simulation only; it is not read by the
 Yosys synthesis scripts.
@@ -39,6 +44,7 @@ Variant-specific outputs are written under `build/synth/<variant>/`:
 - `tinynpu_apb_wrapper_synth.v` for `build/synth/apb/`
 - `tinynpu_dma_descriptor_wrapper_synth.v` for `build/synth/dma_desc/`
 - `tinynpu_axi_lite_wrapper_synth.v` for `build/synth/axi_lite/`
+- `tinynpu_axi_read_dma_wrapper_synth.v` for `build/synth/axi_read_dma/`
 - `synth_summary.json`
 
 ## Current Limitations
@@ -47,9 +53,10 @@ Variant-specific outputs are written under `build/synth/<variant>/`:
 - No real standard-cell library mapping yet
 - No timing constraints yet
 - No clock uncertainty or IO delay modeling
-- No full AXI/AHB memory bus master yet
+- No full AXI/AHB read/write memory bus master yet
+- AXI read-DMA support is single-beat read-only for A/B loads
 - No bursts, byte strobes, outstanding transactions, or memory error responses
-  beyond internal timeout detection
+  beyond timeout detection and AXI read response error handling
 - No OpenROAD floorplan, placement, routing, or parasitics
 - No technology-specific area, power, or timing claims
 

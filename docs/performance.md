@@ -2,7 +2,7 @@
 
 tinyNPU records lightweight simulation performance data for the DMA descriptor
 wrapper. These are cycle counts from the Icarus simulation over the abstract
-ready/valid memory port. They are not AXI timing, technology timing, or PPA.
+ready/valid memory port. They are not technology timing or PPA.
 
 ## Run
 
@@ -37,7 +37,7 @@ intentionally abort the DMA operation before normal store-back completion.
 
 ## What Is Not Measured
 
-- No AXI protocol timing.
+- No AXI write-master timing.
 - No burst behavior.
 - No outstanding transactions.
 - No memory error responses.

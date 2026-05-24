@@ -1,5 +1,18 @@
 # Changelog
 
+## v28
+
+- Added optional `tinynpu_axi_read_dma_wrapper`.
+- Added AXI4-Lite control plus single-beat AXI4 read master loads for A/B.
+- Kept C result stores on a separate abstract write port.
+- Added AXI read-DMA simulation for identity, mixed signed, AR backpressure,
+  delayed RVALID, RRESP error, timeout, and done IRQ behavior.
+- Added `make sim-axi-read-dma` and `make synth-axi-read-dma`.
+- Kept the existing descriptor wrapper, AXI-Lite control wrapper, core/APB
+  wrappers, MAC variants, and v27 flows intact.
+- Kept AXI write master, bursts, IDs, and multiple outstanding transactions out
+  of scope.
+
 ## v27
 
 - Added `DMA_ERROR_CODE` with memory timeout and core timeout error codes.

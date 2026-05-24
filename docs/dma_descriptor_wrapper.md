@@ -14,6 +14,11 @@ does not change this module's APB-style register interface or abstract memory
 port; it only translates AXI4-Lite software accesses into descriptor-wrapper
 register transactions. See `docs/axi_lite_wrapper.md`.
 
+v28 adds `tinynpu_axi_read_dma_wrapper` as a separate optional wrapper that uses
+AXI4 reads for A/B loads and an abstract write port for C stores. This
+descriptor wrapper remains the APB-style abstract-memory implementation and is
+kept intact.
+
 ## External Memory Port
 
 The wrapper exposes this single-beat ready/valid memory port:

@@ -132,7 +132,32 @@ Targets:
 
 See `docs/axi_lite_wrapper.md`.
 
-## Layer 5: DMA-Style Simulation Model
+## Layer 5: AXI Read-DMA Wrapper
+
+File:
+
+- `rtl/tinynpu_axi_read_dma_wrapper.sv`
+
+Purpose:
+
+Optional AXI4-Lite controlled wrapper that adds an AXI4 read master for loading
+A/B from external memory. It uses single-beat AXI reads only, writes A/B into
+the wrapped core, launches the core, polls completion, and stores C through a
+separate abstract write port.
+
+This is the first full-AXI-memory-master step, but it is read-only. There is no
+AXI write master, no bursts, no IDs, and no multiple outstanding transactions.
+
+Status: synthesizable.
+
+Targets:
+
+- Test: `make sim-axi-read-dma`
+- Synthesize: `make synth-axi-read-dma`
+
+See `docs/axi_read_dma_wrapper.md`.
+
+## Layer 6: DMA-Style Simulation Model
 
 File:
 
@@ -157,10 +182,9 @@ Targets:
 
 ## Not Implemented Yet
 
-- Full AXI/AHB memory master.
+- Full AXI/AHB read/write memory master.
 - Burst transfers.
 - Byte strobes on the abstract memory port, memory error handling, and full
   interrupt-controller integration.
-- Interrupt output.
 - SRAM macro integration.
 - Technology-mapped timing/PPA.

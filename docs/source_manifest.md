@@ -17,6 +17,8 @@
 - `rtl/tinynpu_axi_lite_wrapper.sv`: AXI4-Lite control wrapper around the DMA
   descriptor wrapper; memory port remains the abstract ready/valid interface
   and descriptor IRQ is passed through.
+- `rtl/tinynpu_axi_read_dma_wrapper.sv`: AXI4-Lite controlled wrapper with an
+  AXI4 read master for A/B loads and an abstract C write port.
 
 ## Simulation-Only RTL/Checkers
 
@@ -34,6 +36,7 @@
 - `tb/tb_tinynpu_dma_descriptor_wrapper.sv`: synthesizable descriptor-wrapper
   regression.
 - `tb/tb_tinynpu_axi_lite_wrapper.sv`: AXI4-Lite control-wrapper regression.
+- `tb/tb_tinynpu_axi_read_dma_wrapper.sv`: AXI read-DMA wrapper regression.
 
 ## Models And Simulation Runners
 
@@ -44,6 +47,7 @@
 - `sim/run_dma_descriptor_wrapper_sim.py`: DMA descriptor-wrapper simulation
   runner.
 - `sim/run_axi_lite_sim.py`: AXI4-Lite control-wrapper simulation runner.
+- `sim/run_axi_read_dma_sim.py`: AXI read-DMA wrapper simulation runner.
 
 ## Scripts
 

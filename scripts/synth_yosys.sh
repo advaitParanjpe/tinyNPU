@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 MAC_VARIANT="${1:-row4}"
-if [ "${MAC_VARIANT}" != "row4" ] && [ "${MAC_VARIANT}" != "serial" ] && [ "${MAC_VARIANT}" != "full16" ] && [ "${MAC_VARIANT}" != "apb" ] && [ "${MAC_VARIANT}" != "dma_desc" ] && [ "${MAC_VARIANT}" != "axi_lite" ]; then
-  echo "ERROR: expected variant 'row4', 'serial', 'full16', 'apb', 'dma_desc', or 'axi_lite', got '${MAC_VARIANT}'"
+if [ "${MAC_VARIANT}" != "row4" ] && [ "${MAC_VARIANT}" != "serial" ] && [ "${MAC_VARIANT}" != "full16" ] && [ "${MAC_VARIANT}" != "apb" ] && [ "${MAC_VARIANT}" != "dma_desc" ] && [ "${MAC_VARIANT}" != "axi_lite" ] && [ "${MAC_VARIANT}" != "axi_read_dma" ]; then
+  echo "ERROR: expected variant 'row4', 'serial', 'full16', 'apb', 'dma_desc', 'axi_lite', or 'axi_read_dma', got '${MAC_VARIANT}'"
   exit 2
 fi
 
@@ -23,6 +23,10 @@ elif [ "${MAC_VARIANT}" = "dma_desc" ]; then
 elif [ "${MAC_VARIANT}" = "axi_lite" ]; then
   TOP_MODULE="tinynpu_axi_lite_wrapper"
   NETLIST_BASENAME="tinynpu_axi_lite_wrapper_synth.v"
+  SUMMARY_MAC_VARIANT="row4"
+elif [ "${MAC_VARIANT}" = "axi_read_dma" ]; then
+  TOP_MODULE="tinynpu_axi_read_dma_wrapper"
+  NETLIST_BASENAME="tinynpu_axi_read_dma_wrapper_synth.v"
   SUMMARY_MAC_VARIANT="row4"
 fi
 
