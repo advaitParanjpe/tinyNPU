@@ -50,6 +50,8 @@ path, number of passed coverage categories, and known gap count.
 - DMA memory-port backpressure smoke tests through `make sim-dma-desc`,
   including fixed-latency memory, deterministic random backpressure, and
   stalled-request stability checking.
+- Reusable memory-port assertions are compiled into `make sim-dma-desc` with
+  `TINYNPU_SIM_ASSERT`.
 
 ## Known Gaps
 

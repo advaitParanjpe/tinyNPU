@@ -18,6 +18,8 @@
 
 - `rtl/tinynpu_assertions.sv`: simulation checker logic enabled by
   `TINYNPU_SIM_ASSERT`.
+- `rtl/tinynpu_mem_port_assertions.sv`: reusable simulation-only checker for the
+  abstract DMA memory port, enabled by `TINYNPU_SIM_ASSERT`.
 
 ## Testbenches
 

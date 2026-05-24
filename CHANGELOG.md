@@ -1,5 +1,14 @@
 # Changelog
 
+## v23
+
+- Added reusable simulation-only `tinynpu_mem_port_assertions` for the abstract
+  DMA memory port.
+- Connected the checker to the DMA descriptor-wrapper regression under
+  `TINYNPU_SIM_ASSERT`.
+- Kept the v22 fixed-latency and deterministic random-backpressure tests.
+- Kept AXI and synthesis-visible behavior unchanged.
+
 ## v22
 
 - Added fixed-latency and deterministic random-backpressure modes to the DMA

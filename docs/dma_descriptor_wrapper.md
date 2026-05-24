@@ -107,6 +107,10 @@ modes:
 
 The testbench also monitors that a stalled memory request keeps address,
 direction, and write data stable until `mem_ready` completes the transaction.
+The reusable simulation-only checker in `rtl/tinynpu_mem_port_assertions.sv` is
+compiled under `TINYNPU_SIM_ASSERT` for this regression. It fails simulation if
+`mem_valid` drops during a stall, if address/direction/write data change while
+stalled, or if request signals contain X/Z values when active.
 
 ## Future Path
 

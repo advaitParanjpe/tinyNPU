@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v22 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v23 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -16,6 +16,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Lightweight simulation assertions/checkers and bounded-latency checking.
 - Coverage-style scenario reporting for tested functional/control/bus cases.
 - DMA memory-port fixed-latency and deterministic backpressure testing.
+- Reusable simulation-only memory-port assertions for the abstract DMA memory port.
 - Generic Yosys synthesis for all variants.
 - Lightweight repository checks for commit readiness.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
@@ -180,6 +181,7 @@ The current self-checking Icarus simulation covers:
 - focused APB wrapper tests for identity, mixed signed, invalid/unaligned access, C read-only behavior, start while busy, and reset
 - synthesizable DMA descriptor-wrapper tests for descriptor read/write, DMA memory movement, core launch, busy core-window blocking, and forwarded core access
 - fixed-latency and deterministic random-backpressure tests for the descriptor wrapper memory port
+- reusable memory-port assertions for valid hold, stable stalled requests, and X/Z checks
 - descriptor-driven DMA-style APB system-flow tests for external-memory load, compute, poll, and store-back behavior
 - reset mid-operation recovery
 - invalid bus read/write behavior
@@ -199,6 +201,7 @@ The simulation checkers cover:
 - every accepted start reaches done within the latency bound
 - reset clears busy/done status
 - C storage remains stable while done is sticky and no new start is accepted
+- DMA memory-port requests remain valid and stable while stalled
 
 ## Synthesis
 

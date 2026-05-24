@@ -90,7 +90,9 @@ from the core and writes them back through the abstract memory port.
 The memory port is word-addressed, single-beat, ready/valid, and not AXI. It has
 no bursts, byte strobes, outstanding transactions, or error response.
 The descriptor-wrapper testbench covers always-ready, fixed-latency, and
-deterministic random-backpressure memory behavior.
+deterministic random-backpressure memory behavior. The reusable
+`tinynpu_mem_port_assertions` checker verifies the abstract memory-port protocol
+under `TINYNPU_SIM_ASSERT`.
 
 Status: synthesizable.
 

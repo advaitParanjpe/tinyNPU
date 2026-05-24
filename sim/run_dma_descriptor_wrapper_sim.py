@@ -49,7 +49,7 @@ def run(cmd, capture=False):
     return subprocess.run(cmd, cwd=REPO_ROOT)
 
 
-def write_summary(status, tests_passed=0, passed_names=None, notes=None):
+def write_summary(status, tests_passed=0, passed_names=None, sim_stdout="", notes=None):
     summary = {
         "status": status,
         "top": "tinynpu_dma_descriptor_wrapper",
@@ -79,6 +79,7 @@ def write_summary(status, tests_passed=0, passed_names=None, notes=None):
         ),
         "protocol_stability_checked": "desc_dma_mem_protocol_stability" in (passed_names or []),
         "stalled_transactions_observed": "desc_dma_mem_protocol_stability" in (passed_names or []),
+        "mem_port_assertions_enabled": "Memory-port assertions: enabled" in sim_stdout,
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
         "notes": notes or "Uses simple abstract ready/valid memory port; not AXI",
@@ -115,6 +116,7 @@ def main():
     sources = [
         "rtl/tinynpu_pkg.sv",
         "rtl/tinynpu_assertions.sv",
+        "rtl/tinynpu_mem_port_assertions.sv",
         "rtl/tinynpu_mac_serial.sv",
         "rtl/tinynpu_mac_row4.sv",
         "rtl/tinynpu_mac_full16.sv",
@@ -152,7 +154,7 @@ def main():
 
     passed_names = parse_passed_tests(sim_result.stdout)
     status = "passed" if sim_result.returncode == 0 and len(passed_names) == len(TEST_NAMES) else "failed"
-    write_summary(status, len(passed_names), passed_names)
+    write_summary(status, len(passed_names), passed_names, sim_stdout=sim_result.stdout)
 
     if status != "passed":
         print(

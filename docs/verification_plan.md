@@ -38,6 +38,8 @@
 - Accepted starts must reach done within 200 cycles
 - Reset clears busy/done status
 - C output storage remains stable while done is sticky and no new start occurs
+- DMA memory-port `mem_valid`, `mem_we`, and `mem_addr` are known when active
+- DMA memory-port requests remain asserted and stable while stalled
 - Testbench latency accounting reports accepted-start-to-done latency
 - Current observed max latencies are 66 cycles for `serial`, 26 cycles for
   `row4`, and 8 cycles for `full16`, bounded by a 200-cycle checker

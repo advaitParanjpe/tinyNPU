@@ -16,6 +16,7 @@ REQUIRED_FILES = (
     "rtl/tinynpu_mac_array.sv",
     "rtl/tinynpu_scratchpad_i8.sv",
     "rtl/tinynpu_result_buffer_i32.sv",
+    "rtl/tinynpu_mem_port_assertions.sv",
     "rtl/tinynpu_apb_wrapper.sv",
     "rtl/tinynpu_dma_descriptor_wrapper.sv",
     "tb/tb_tinynpu_top.sv",

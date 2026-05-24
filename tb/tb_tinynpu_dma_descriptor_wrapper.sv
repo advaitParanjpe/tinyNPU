@@ -54,13 +54,9 @@ module tb_tinynpu_dma_descriptor_wrapper;
   int mem_transaction_count;
   int mem_stall_count;
   int mem_stalled_transactions;
-  int mem_protocol_violations;
   logic mem_ready_q;
   logic mem_wait_active;
-  logic monitor_stalled_q;
-  logic monitor_we_q;
-  logic [31:0] monitor_addr_q;
-  logic [31:0] monitor_wdata_q;
+  logic mem_stall_active_q;
 
   tinynpu_dma_descriptor_wrapper dut (
     .pclk    (pclk),
@@ -73,6 +69,17 @@ module tb_tinynpu_dma_descriptor_wrapper;
     .prdata  (prdata),
     .pready  (pready),
     .pslverr (pslverr),
+    .mem_valid (mem_valid),
+    .mem_we    (mem_we),
+    .mem_addr  (mem_addr),
+    .mem_wdata (mem_wdata),
+    .mem_rdata (mem_rdata),
+    .mem_ready (mem_ready)
+  );
+
+  tinynpu_mem_port_assertions u_mem_port_assertions (
+    .clk       (pclk),
+    .rst_n     (presetn),
     .mem_valid (mem_valid),
     .mem_we    (mem_we),
     .mem_addr  (mem_addr),
@@ -157,40 +164,20 @@ module tb_tinynpu_dma_descriptor_wrapper;
     end
   end
 
-  always @(posedge pclk or negedge presetn) begin
+  always_ff @(posedge pclk or negedge presetn) begin
     if (!presetn) begin
-      monitor_stalled_q <= 1'b0;
-      monitor_we_q <= 1'b0;
-      monitor_addr_q <= 32'h0;
-      monitor_wdata_q <= 32'h0;
       mem_stall_count <= 0;
       mem_stalled_transactions <= 0;
-      mem_protocol_violations <= 0;
+      mem_stall_active_q <= 1'b0;
     end else begin
-      if (monitor_stalled_q) begin
-        if (!mem_valid) begin
-          $display("FAIL memory protocol violation: mem_valid deasserted before mem_ready");
-          mem_protocol_violations <= mem_protocol_violations + 1;
-          monitor_stalled_q <= 1'b0;
-        end else begin
-          if ((mem_addr !== monitor_addr_q) || (mem_we !== monitor_we_q) ||
-              (monitor_we_q && (mem_wdata !== monitor_wdata_q))) begin
-            $display("FAIL memory protocol violation: memory request changed while stalled");
-            $display("  expected addr=0x%08x we=%0b wdata=0x%08x", monitor_addr_q, monitor_we_q, monitor_wdata_q);
-            $display("  actual   addr=0x%08x we=%0b wdata=0x%08x", mem_addr, mem_we, mem_wdata);
-            mem_protocol_violations <= mem_protocol_violations + 1;
-          end
-          if (mem_ready) begin
-            monitor_stalled_q <= 1'b0;
-          end
-        end
-      end else if (mem_valid && !mem_ready) begin
-        monitor_stalled_q <= 1'b1;
-        monitor_we_q <= mem_we;
-        monitor_addr_q <= mem_addr;
-        monitor_wdata_q <= mem_wdata;
+      if (mem_valid && !mem_ready) begin
         mem_stall_count <= mem_stall_count + 1;
-        mem_stalled_transactions <= mem_stalled_transactions + 1;
+        if (!mem_stall_active_q) begin
+          mem_stalled_transactions <= mem_stalled_transactions + 1;
+        end
+        mem_stall_active_q <= 1'b1;
+      end else begin
+        mem_stall_active_q <= 1'b0;
       end
     end
   end
@@ -270,7 +257,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
       mem_wait_active = 1'b0;
       mem_ready_q = (mode == MEM_MODE_ALWAYS_READY);
       mem_transaction_count = 0;
-      monitor_stalled_q = 1'b0;
+      mem_stall_active_q = 1'b0;
       repeat (2) @(posedge pclk);
     end
   endtask
@@ -760,10 +747,6 @@ module tb_tinynpu_dma_descriptor_wrapper;
         $display("FAIL desc_dma_mem_protocol_stability: no stalled memory transactions observed");
         local_failures = local_failures + 1;
       end
-      if (mem_protocol_violations != 0) begin
-        $display("FAIL desc_dma_mem_protocol_stability: protocol violations=%0d", mem_protocol_violations);
-        local_failures = local_failures + 1;
-      end
 
       if (local_failures == 0) begin
         tests_passed = tests_passed + 1;
@@ -895,13 +878,15 @@ module tb_tinynpu_dma_descriptor_wrapper;
     mem_transaction_count = 0;
     mem_stall_count = 0;
     mem_stalled_transactions = 0;
-    mem_protocol_violations = 0;
     mem_wait_active = 1'b0;
     mem_ready_q = 1'b0;
-    monitor_stalled_q = 1'b0;
-    monitor_we_q = 1'b0;
-    monitor_addr_q = 32'h0;
-    monitor_wdata_q = 32'h0;
+    mem_stall_active_q = 1'b0;
+
+`ifdef TINYNPU_SIM_ASSERT
+    $display("Memory-port assertions: enabled");
+`else
+    $display("Memory-port assertions: disabled");
+`endif
 
     psel    = 1'b0;
     penable = 1'b0;
