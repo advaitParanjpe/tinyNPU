@@ -8,8 +8,8 @@ same flow for the other MAC variants. `make synth-apb` synthesizes the optional
 APB wrapper around the default `row4` core.
 
 `make synth-dma-desc` synthesizes the optional DMA descriptor wrapper around the
-APB core wrapper. This includes synthesizable descriptor registers, but no DMA
-data mover.
+APB core wrapper. This includes synthesizable descriptor registers and a
+DMA-control FSM skeleton, but no real DMA data mover.
 
 The flow reads the SystemVerilog RTL, sets `tinynpu_top` as the top module, runs
 generic synthesis cleanup and optimization passes, writes a synthesized Verilog

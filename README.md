@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v19 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v20 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -8,7 +8,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Fixed 4x4 signed int8 matrix multiply: `C = A x B`, with signed int32 C results.
 - Simple always-ready register bus with CTRL/STATUS, A/B scratchpads, and C result storage.
 - Optional APB-lite-style wrapper around the existing simple-bus core.
-- Optional synthesizable DMA descriptor wrapper around the APB core wrapper.
+- Optional synthesizable DMA descriptor wrapper with a DMA-control FSM skeleton.
 - DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
@@ -89,10 +89,13 @@ The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
 There is no AXI, real DMA data mover, SRAM macro, or real external memory interface
-in v19. APB is available as an optional wrapper around the existing simple-bus
+in v20. APB is available as an optional wrapper around the existing simple-bus
 core. A second optional wrapper adds synthesizable descriptor registers at
-`0x100`-`0x11f`, while forwarding `0x000`-`0x0ff` to the APB core wrapper. The
-DMA-style memory movement is currently testbench-only.
+`0x100`-`0x11f`, while forwarding `0x000`-`0x0ff` to the APB core wrapper. Its
+DMA-control FSM runs `LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C`,
+where load/store are placeholder timing states and `START_CORE`/`WAIT_CORE`
+drive the wrapped tinyNPU core. DMA-style external-memory movement is currently
+testbench-only.
 
 ## Design Layers
 
@@ -101,7 +104,7 @@ models:
 
 - MAC datapaths and `tinynpu_top` are synthesizable accelerator RTL.
 - `tinynpu_apb_wrapper` is a synthesizable APB-lite-style adapter.
-- `tinynpu_dma_descriptor_wrapper` is a synthesizable descriptor/status wrapper.
+- `tinynpu_dma_descriptor_wrapper` is a synthesizable descriptor/status wrapper with a DMA-control FSM skeleton.
 - `tb/tb_tinynpu_apb_dma_model.sv` is a testbench-only DMA-style model.
 
 See `docs/design_layers.md` and `docs/source_manifest.md` for the full layer and
@@ -172,7 +175,7 @@ The current self-checking Icarus simulation covers:
 - control/status behavior: start while busy, sticky done, clear done, new start after done
 - bus protocol behavior: always-ready signaling, A/B readback, C read-only storage, ignored CTRL bits, unaligned access handling
 - focused APB wrapper tests for identity, mixed signed, invalid/unaligned access, C read-only behavior, start while busy, and reset
-- synthesizable DMA descriptor-wrapper tests for descriptor read/write, status, and forwarded core access
+- synthesizable DMA descriptor-wrapper tests for descriptor read/write, FSM status, core launch, busy core-window blocking, and forwarded core access
 - descriptor-driven DMA-style APB system-flow tests for external-memory load, compute, poll, and store-back behavior
 - reset mid-operation recovery
 - invalid bus read/write behavior

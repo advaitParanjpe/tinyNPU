@@ -21,16 +21,34 @@ module tinynpu_dma_descriptor_wrapper (
   localparam logic [11:0] DMA_C_EXT_BASE = 12'h110;
   localparam logic [11:0] DMA_CONFIG     = 12'h114;
 
-  localparam logic [2:0] DESC_BUSY_CYCLES = 3'd4;
+  localparam logic [7:0] CORE_ADDR_CTRL   = 8'h00;
+  localparam logic [7:0] CORE_ADDR_STATUS = 8'h04;
+
+  localparam logic [2:0] DMA_IDLE       = 3'd0;
+  localparam logic [2:0] DMA_LOAD_A     = 3'd1;
+  localparam logic [2:0] DMA_LOAD_B     = 3'd2;
+  localparam logic [2:0] DMA_START_CORE = 3'd3;
+  localparam logic [2:0] DMA_WAIT_CORE  = 3'd4;
+  localparam logic [2:0] DMA_STORE_C    = 3'd5;
+  localparam logic [2:0] DMA_DONE       = 3'd6;
+
+  localparam logic [2:0] PLACEHOLDER_CYCLES = 3'd4;
 
   logic        core_sel;
   logic        desc_sel;
   logic        apb_access;
+  logic        external_core_access;
+  logic        internal_core_access;
 
   logic [31:0] core_prdata;
   logic        core_pready;
   logic        core_pslverr;
   logic [31:0] desc_prdata;
+  logic        core_psel;
+  logic        core_penable;
+  logic        core_pwrite;
+  logic [7:0]  core_paddr;
+  logic [31:0] core_pwdata;
 
   logic        dma_busy;
   logic        dma_done;
@@ -39,24 +57,37 @@ module tinynpu_dma_descriptor_wrapper (
   logic [31:0] dma_b_ext_base;
   logic [31:0] dma_c_ext_base;
   logic [31:0] dma_config;
-  logic [2:0]  busy_count;
+  logic [2:0]  dma_state;
+  logic [2:0]  delay_count;
 
   assign core_sel   = (paddr[11:8] == 4'h0);
   assign desc_sel   = (paddr >= 12'h100) && (paddr <= 12'h11f);
   assign apb_access = psel && penable;
+  assign external_core_access = core_sel && !dma_busy;
+  assign internal_core_access = (dma_state == DMA_START_CORE) || (dma_state == DMA_WAIT_CORE);
 
-  assign pready  = core_sel ? core_pready : 1'b1;
+  assign pready  = (core_sel && !dma_busy) ? core_pready : 1'b1;
   assign pslverr = 1'b0;
-  assign prdata  = core_sel ? core_prdata : desc_prdata;
+  assign prdata  = core_sel ? (dma_busy ? 32'h0 : core_prdata) : desc_prdata;
+
+  assign core_psel    = internal_core_access ? 1'b1 : (psel && external_core_access);
+  assign core_penable = internal_core_access ? 1'b1 : penable;
+  assign core_pwrite  = internal_core_access ? (dma_state == DMA_START_CORE) : pwrite;
+  assign core_paddr   = internal_core_access ?
+                        ((dma_state == DMA_START_CORE) ? CORE_ADDR_CTRL : CORE_ADDR_STATUS) :
+                        paddr[7:0];
+  assign core_pwdata  = internal_core_access ?
+                        ((dma_state == DMA_START_CORE) ? 32'h1 : 32'h0) :
+                        pwdata;
 
   tinynpu_apb_wrapper u_core_apb (
     .pclk    (pclk),
     .presetn (presetn),
-    .psel    (psel && core_sel),
-    .penable (penable),
-    .pwrite  (pwrite),
-    .paddr   (paddr[7:0]),
-    .pwdata  (pwdata),
+    .psel    (core_psel),
+    .penable (core_penable),
+    .pwrite  (core_pwrite),
+    .paddr   (core_paddr),
+    .pwdata  (core_pwdata),
     .prdata  (core_prdata),
     .pready  (core_pready),
     .pslverr (core_pslverr)
@@ -72,16 +103,9 @@ module tinynpu_dma_descriptor_wrapper (
       dma_b_ext_base <= 32'h0;
       dma_c_ext_base <= 32'h0;
       dma_config     <= 32'h0;
-      busy_count     <= 3'h0;
+      dma_state      <= DMA_IDLE;
+      delay_count    <= 3'h0;
     end else begin
-      if (dma_busy && (busy_count != 3'h0)) begin
-        busy_count <= busy_count - 3'h1;
-        if (busy_count == 3'h1) begin
-          dma_busy <= 1'b0;
-          dma_done <= 1'b1;
-        end
-      end
-
       if (apb_access && desc_sel && pwrite) begin
         case (paddr)
           DMA_CTRL: begin
@@ -91,11 +115,12 @@ module tinynpu_dma_descriptor_wrapper (
             if (pwdata[2]) begin
               dma_error <= 1'b0;
             end
-            if (pwdata[0] && !dma_busy) begin
-              dma_busy   <= 1'b1;
-              dma_done   <= 1'b0;
-              dma_error  <= 1'b0;
-              busy_count <= DESC_BUSY_CYCLES;
+            if (pwdata[0] && !dma_busy && (dma_state == DMA_IDLE)) begin
+              dma_busy    <= 1'b1;
+              dma_done    <= 1'b0;
+              dma_error   <= 1'b0;
+              dma_state   <= DMA_LOAD_A;
+              delay_count <= PLACEHOLDER_CYCLES;
             end
           end
           DMA_A_EXT_BASE: dma_a_ext_base <= pwdata;
@@ -107,8 +132,64 @@ module tinynpu_dma_descriptor_wrapper (
         endcase
       end
 
+      case (dma_state)
+        DMA_IDLE: begin
+        end
+
+        DMA_LOAD_A: begin
+          if (delay_count > 3'h1) begin
+            delay_count <= delay_count - 3'h1;
+          end else begin
+            delay_count <= PLACEHOLDER_CYCLES;
+            dma_state   <= DMA_LOAD_B;
+          end
+        end
+
+        DMA_LOAD_B: begin
+          if (delay_count > 3'h1) begin
+            delay_count <= delay_count - 3'h1;
+          end else begin
+            delay_count <= 3'h0;
+            dma_state   <= DMA_START_CORE;
+          end
+        end
+
+        DMA_START_CORE: begin
+          dma_state <= DMA_WAIT_CORE;
+        end
+
+        DMA_WAIT_CORE: begin
+          if (core_pready && core_prdata[1]) begin
+            delay_count <= PLACEHOLDER_CYCLES;
+            dma_state   <= DMA_STORE_C;
+          end
+        end
+
+        DMA_STORE_C: begin
+          if (delay_count > 3'h1) begin
+            delay_count <= delay_count - 3'h1;
+          end else begin
+            delay_count <= 3'h0;
+            dma_state   <= DMA_DONE;
+          end
+        end
+
+        DMA_DONE: begin
+          dma_busy  <= 1'b0;
+          dma_done  <= 1'b1;
+          dma_state <= DMA_IDLE;
+        end
+
+        default: begin
+          dma_busy    <= 1'b0;
+          dma_error   <= 1'b1;
+          dma_state   <= DMA_IDLE;
+          delay_count <= 3'h0;
+        end
+      endcase
+
       if (apb_access && !pwrite) begin
-        if (core_sel && core_pready) begin
+        if (core_sel && !dma_busy && core_pready) begin
           desc_prdata <= 32'h0;
         end else if (desc_sel) begin
           case (paddr)

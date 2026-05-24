@@ -1,5 +1,13 @@
 # Changelog
 
+## v20
+
+- Replaced descriptor-wrapper status-only start behavior with a synthesizable
+  DMA-control FSM skeleton.
+- Added internal FSM launch/poll of the wrapped tinyNPU core.
+- Added descriptor-wrapper tests for FSM done, core launch, and blocked
+  external core-window access while DMA is busy.
+
 ## v19
 
 - Added design-layer documentation separating synthesizable RTL, optional

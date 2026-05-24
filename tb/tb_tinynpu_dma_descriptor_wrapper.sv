@@ -114,7 +114,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
     begin
       timeout = 0;
       apb_read(DMA_STATUS, status);
-      while ((status[1] !== 1'b1) && (timeout < 20)) begin
+      while ((status[1] !== 1'b1) && (timeout < 120)) begin
         timeout = timeout + 1;
         apb_read(DMA_STATUS, status);
       end
@@ -171,7 +171,37 @@ module tb_tinynpu_dma_descriptor_wrapper;
     end
   endtask
 
-  task automatic run_desc_start_done_clear;
+  task automatic load_core_identity;
+    int i;
+    begin
+      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
+        apb_write(ADDR_A_BASE + (i * 4), 32'h0);
+        apb_write(ADDR_B_BASE + (i * 4), pack_i8(i + 1));
+      end
+      for (i = 0; i < MATRIX_N; i = i + 1) begin
+        apb_write(ADDR_A_BASE + (((i * MATRIX_N) + i) * 4), pack_i8(1));
+      end
+    end
+  endtask
+
+  task automatic check_core_identity(input string test_name, output int local_failures);
+    int i;
+    int signed got;
+    logic [31:0] data;
+    begin
+      local_failures = 0;
+      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
+        apb_read(ADDR_C_BASE + (i * 4), data);
+        got = $signed(data);
+        if (got !== (i + 1)) begin
+          $display("FAIL %s: C[%0d] expected %0d actual %0d", test_name, i, i + 1, got);
+          local_failures = local_failures + 1;
+        end
+      end
+    end
+  endtask
+
+  task automatic run_desc_fsm_start_done;
     int local_failures;
     logic [31:0] status;
     begin
@@ -197,10 +227,79 @@ module tb_tinynpu_dma_descriptor_wrapper;
 
       if (local_failures == 0) begin
         tests_passed = tests_passed + 1;
-        $display("PASS desc_start_done_clear");
+        $display("PASS desc_fsm_start_done");
       end else begin
         failures = failures + local_failures;
       end
+    end
+  endtask
+
+  task automatic run_desc_fsm_core_launch;
+    int local_failures;
+    int c_failures;
+    logic [31:0] status;
+    begin
+      local_failures = 0;
+      apb_write(ADDR_CTRL, 32'h2);
+      load_core_identity();
+
+      apb_write(DMA_CTRL, 32'h1);
+      wait_desc_done();
+
+      apb_read(ADDR_STATUS, status);
+      if (status[1] !== 1'b1) begin
+        $display("FAIL desc_fsm_core_launch: core done not set status=0x%08x", status);
+        local_failures = local_failures + 1;
+      end
+
+      check_core_identity("desc_fsm_core_launch", c_failures);
+      local_failures = local_failures + c_failures;
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_fsm_core_launch");
+      end else begin
+        failures = failures + local_failures;
+      end
+      apb_write(DMA_CTRL, 32'h2);
+    end
+  endtask
+
+  task automatic run_desc_core_window_blocked_while_busy;
+    int local_failures;
+    logic [31:0] data;
+    logic [31:0] status;
+    begin
+      local_failures = 0;
+      apb_write(ADDR_A_BASE, pack_i8(5));
+      apb_write(DMA_CTRL, 32'h1);
+      apb_read(DMA_STATUS, status);
+      if (status[0] !== 1'b1) begin
+        $display("FAIL desc_core_window_blocked_while_busy: busy not set status=0x%08x", status);
+        local_failures = local_failures + 1;
+      end
+
+      apb_write(ADDR_A_BASE, pack_i8(99));
+      apb_read(ADDR_A_BASE, data);
+      if (data !== 32'h0) begin
+        $display("FAIL desc_core_window_blocked_while_busy: busy core read returned 0x%08x", data);
+        local_failures = local_failures + 1;
+      end
+
+      wait_desc_done();
+      apb_read(ADDR_A_BASE, data);
+      if (data !== pack_i8(5)) begin
+        $display("FAIL desc_core_window_blocked_while_busy: busy write was not ignored, A0=0x%08x", data);
+        local_failures = local_failures + 1;
+      end
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_core_window_blocked_while_busy");
+      end else begin
+        failures = failures + local_failures;
+      end
+      apb_write(DMA_CTRL, 32'h2);
     end
   endtask
 
@@ -266,31 +365,15 @@ module tb_tinynpu_dma_descriptor_wrapper;
   endtask
 
   task automatic run_forwarded_core_identity;
-    int i;
     int local_failures;
-    int signed got;
-    logic [31:0] data;
     begin
       local_failures = 0;
-      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
-        apb_write(ADDR_A_BASE + (i * 4), 32'h0);
-        apb_write(ADDR_B_BASE + (i * 4), pack_i8(i + 1));
-      end
-      for (i = 0; i < MATRIX_N; i = i + 1) begin
-        apb_write(ADDR_A_BASE + (((i * MATRIX_N) + i) * 4), pack_i8(1));
-      end
+      load_core_identity();
 
       apb_write(ADDR_CTRL, 32'h1);
       wait_core_done();
 
-      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
-        apb_read(ADDR_C_BASE + (i * 4), data);
-        got = $signed(data);
-        if (got !== (i + 1)) begin
-          $display("FAIL forwarded_core_identity: C[%0d] expected %0d actual %0d", i, i + 1, got);
-          local_failures = local_failures + 1;
-        end
-      end
+      check_core_identity("forwarded_core_identity", local_failures);
 
       if (local_failures == 0) begin
         tests_passed = tests_passed + 1;
@@ -346,11 +429,13 @@ module tb_tinynpu_dma_descriptor_wrapper;
     repeat (2) @(posedge pclk);
 
     run_desc_regs_read_write();
-    run_desc_start_done_clear();
+    run_desc_fsm_start_done();
     run_desc_start_while_busy();
     run_desc_invalid_access();
     run_forwarded_core_identity();
     run_forwarded_core_invalid_unaligned();
+    run_desc_fsm_core_launch();
+    run_desc_core_window_blocked_while_busy();
 
     $display("DMA descriptor-wrapper tests passed: %0d", tests_passed);
     if (failures == 0) begin

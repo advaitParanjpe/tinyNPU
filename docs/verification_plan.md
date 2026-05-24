@@ -14,7 +14,8 @@
 - Focused APB wrapper behavior: identity, mixed signed, invalid/unaligned
   access, C read-only behavior, start while busy, and reset
 - Synthesizable DMA descriptor-wrapper behavior: descriptor register read/write,
-  descriptor start/done/clear, start while busy, invalid descriptor access, and
+  FSM start/done/clear, FSM-launched core computation, start while busy,
+  external core-window blocking while busy, invalid descriptor access, and
   forwarded core identity/invalid access behavior
 - Descriptor-driven DMA-style APB system-flow behavior: descriptor programming,
   external-memory load of A/B, accelerator start, STATUS.done polling,

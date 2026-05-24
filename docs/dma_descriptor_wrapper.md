@@ -5,7 +5,8 @@ wrapper that adds software-visible DMA descriptor registers around the existing
 `tinynpu_apb_wrapper` core interface.
 
 This is not a real DMA data mover yet. The wrapper stores descriptor registers
-and exposes simple status behavior only.
+and runs a small DMA-control FSM skeleton that can launch the wrapped tinyNPU
+core.
 
 ## Address Map
 
@@ -33,17 +34,35 @@ Invalid descriptor reads return `0`. Invalid descriptor writes are ignored.
 
 ## Current Behavior
 
-When software writes `DMA_CTRL.start` while idle, the wrapper sets
-`DMA_STATUS.busy` for four cycles and then sets `DMA_STATUS.done`. No external
-memory is read or written. A start write while busy is ignored and does not set
-error.
+When software writes `DMA_CTRL.start` while idle, the wrapper starts this FSM:
+
+```text
+IDLE -> LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C -> DONE
+```
+
+`LOAD_A`, `LOAD_B`, and `STORE_C` are placeholder timing states only. They do
+not read or write external memory.
+
+`START_CORE` issues an internal APB write to the wrapped core CTRL register.
+`WAIT_CORE` issues internal APB reads to the wrapped core STATUS register until
+core done is observed. `DONE` clears busy and sets sticky descriptor done.
+
+A start write while busy is ignored and does not set error.
 
 `DMA_CTRL.clear_done` clears sticky done. `DMA_CTRL.clear_error` clears error.
 The current wrapper does not raise error internally.
 
 Forwarded core reads preserve the one-wait-state read behavior of
-`tinynpu_apb_wrapper`. Descriptor-register accesses are ready in the APB access
-phase.
+`tinynpu_apb_wrapper` while the descriptor FSM is idle.
+
+While the descriptor FSM is busy:
+
+- descriptor-region accesses continue to work
+- external core-window reads return `0`
+- external core-window writes are ignored
+- the internal FSM owns the wrapped core APB path
+
+Descriptor-register accesses are ready in the APB access phase.
 
 ## Testbench Model vs Synthesizable Wrapper
 

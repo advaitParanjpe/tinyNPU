@@ -76,8 +76,15 @@ Optional APB-lite-style wrapper with a 12-bit APB address space. It forwards
 `0x000`-`0x0ff` to `tinynpu_apb_wrapper` and implements descriptor registers at
 `0x100`-`0x11f`.
 
-The descriptor start behavior is status-only in v19: start asserts busy for a
-few cycles, then sets done. No real DMA data mover exists yet.
+The v20 descriptor start behavior runs a small DMA-control FSM skeleton:
+
+```text
+IDLE -> LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C -> DONE
+```
+
+`LOAD_A`, `LOAD_B`, and `STORE_C` are placeholder timing states. `START_CORE`
+and `WAIT_CORE` drive the wrapped tinyNPU core through the internal APB path. No
+real DMA data mover exists yet.
 
 Status: synthesizable.
 

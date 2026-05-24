@@ -14,11 +14,23 @@ SUMMARY_PATH = BUILD_DIR / "sim_summary.json"
 
 TEST_NAMES = (
     "desc_regs_read_write",
-    "desc_start_done_clear",
+    "desc_fsm_start_done",
     "desc_start_while_busy",
     "desc_invalid_access",
     "forwarded_core_identity",
     "forwarded_core_invalid_unaligned",
+    "desc_fsm_core_launch",
+    "desc_core_window_blocked_while_busy",
+)
+
+FSM_STATES = (
+    "IDLE",
+    "LOAD_A",
+    "LOAD_B",
+    "START_CORE",
+    "WAIT_CORE",
+    "STORE_C",
+    "DONE",
 )
 
 
@@ -36,10 +48,14 @@ def write_summary(status, tests_passed=0, passed_names=None, notes=None):
         "testbench": "tb_tinynpu_dma_descriptor_wrapper",
         "mac_variant": "row4",
         "descriptor_registers_synthesizable": True,
+        "dma_fsm": True,
         "real_dma_rtl": False,
+        "real_memory_movement": False,
+        "fsm_states": list(FSM_STATES),
+        "core_launch_verified": "desc_fsm_core_launch" in (passed_names or []),
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
-        "notes": notes or "Descriptor registers are synthesizable; memory movement DMA is not implemented yet",
+        "notes": notes or "Descriptor registers and DMA-control FSM skeleton are synthesizable; real memory movement DMA is not implemented yet",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
