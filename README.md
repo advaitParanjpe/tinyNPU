@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v12 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v13 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -13,6 +13,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Lightweight simulation assertions/checkers and bounded-latency checking.
 - Coverage-style scenario reporting for tested functional/control/bus cases.
 - Generic Yosys synthesis for all variants.
+- Lightweight repository checks for commit readiness.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
 
 ## Requirements
@@ -26,6 +27,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ```sh
 make vectors
+make check
 make golden
 make sim
 make synth
@@ -37,6 +39,7 @@ make sim-full16
 make synth-full16
 make results-full16
 make compare
+make precommit
 ```
 
 The simulation builds under `build/` and writes a VCD waveform to
@@ -74,7 +77,7 @@ The `full16` variant updates all 16 C accumulators in parallel for each `k`,
 then commits the full C matrix. It is an upper-parallelism baseline for the
 fixed 4x4 design.
 
-There is no AXI, APB, DMA, SRAM macro, or external memory interface in v12.
+There is no AXI, APB, DMA, SRAM macro, or external memory interface in v13.
 
 ## Register Map
 
@@ -179,6 +182,23 @@ This is a generic Yosys synthesis check, not a technology-mapped PPA flow. It
 does not use a standard-cell library, timing constraints, floorplanning, or
 place-and-route yet.
 
+## Development Checks
+
+Run lightweight static repository checks:
+
+```sh
+make check
+```
+
+Run the longer commit-readiness flow:
+
+```sh
+make precommit
+```
+
+`make precommit` runs `make check`, `make golden`, and `make compare`. See
+`docs/development.md` for the recommended local workflow.
+
 ## Results Artifacts
 
 Structured run artifacts are written under `build/`:
@@ -206,3 +226,4 @@ Human-readable notes live in:
 - `docs/architecture_variants.md`
 - `docs/coverage.md`
 - `docs/bus_protocol.md`
+- `docs/development.md`

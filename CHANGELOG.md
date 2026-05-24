@@ -1,5 +1,10 @@
 # Changelog
 
+## v13
+
+- Added `scripts/check_repo.py` for lightweight repository quality checks.
+- Added `make check`, `make precommit`, and development workflow docs.
+
 ## v12
 
 - Documented the simple register bus protocol.
