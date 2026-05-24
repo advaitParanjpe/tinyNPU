@@ -12,9 +12,10 @@
 - `rtl/tinynpu_top.sv`: core accelerator with simple register bus.
 - `rtl/tinynpu_apb_wrapper.sv`: APB-lite-style wrapper around the core.
 - `rtl/tinynpu_dma_descriptor_wrapper.sv`: APB-lite-style descriptor wrapper
-  with DMA FSM, abstract external memory port, and APB core wrapper.
+  with DMA FSM, abstract external memory port, IRQ output, and APB core wrapper.
 - `rtl/tinynpu_axi_lite_wrapper.sv`: AXI4-Lite control wrapper around the DMA
-  descriptor wrapper; memory port remains the abstract ready/valid interface.
+  descriptor wrapper; memory port remains the abstract ready/valid interface
+  and descriptor IRQ is passed through.
 
 ## Simulation-Only RTL/Checkers
 

@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v25 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v26 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -10,6 +10,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Optional APB-lite-style wrapper around the existing simple-bus core.
 - Optional synthesizable DMA descriptor wrapper with a DMA-control FSM and abstract external memory port.
 - Optional AXI4-Lite control wrapper around the DMA descriptor wrapper.
+- DMA done IRQ support on the descriptor wrapper and AXI4-Lite wrapper.
 - DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
@@ -95,9 +96,9 @@ The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
 There is no full AXI memory master, SRAM macro, burst engine, or outstanding
-memory transaction support in v25. APB is available as an optional wrapper
+memory transaction support in v26. APB is available as an optional wrapper
 around the existing simple-bus core. A second optional wrapper adds
-synthesizable descriptor registers at `0x100`-`0x11f`, while forwarding
+synthesizable descriptor registers at `0x100`-`0x120`, while forwarding
 `0x000`-`0x0ff` to the APB core wrapper. Its DMA-control FSM runs
 `LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C` and moves matrix data
 over a simple single-beat ready/valid memory port. This memory port is an
@@ -111,6 +112,13 @@ wrapper's APB-style interface and passes the abstract memory port through
 unchanged. The wrapper supports one outstanding read and one outstanding write,
 returns OKAY responses, has no bursts or IDs, and ignores partial writes unless
 `WSTRB == 4'b1111`.
+
+v26 adds an `irq` output to `tinynpu_dma_descriptor_wrapper` and passes it
+through `tinynpu_axi_lite_wrapper`. `DMA_IRQ_ENABLE[0]` enables done IRQs and
+`DMA_IRQ_STATUS[0]` reports sticky done pending. `DMA_CTRL.clear_done` clears
+both descriptor done and done IRQ pending. Error IRQ registers are present, but
+the current design has no normal memory-error source to stimulate them. Polling
+`DMA_STATUS` is unchanged.
 
 ## Design Layers
 
@@ -193,6 +201,7 @@ The current self-checking Icarus simulation covers:
 - focused APB wrapper tests for identity, mixed signed, invalid/unaligned access, C read-only behavior, start while busy, and reset
 - synthesizable DMA descriptor-wrapper tests for descriptor read/write, DMA memory movement, core launch, busy core-window blocking, and forwarded core access
 - AXI4-Lite control-wrapper tests for descriptor programming, forwarded core access, DMA launch/polling, channel stalls, invalid/unaligned access, and WSTRB behavior
+- descriptor-wrapper and AXI-Lite done IRQ assertion, pending status, clear behavior, and disabled-IRQ behavior
 - fixed-latency and deterministic random-backpressure tests for the descriptor wrapper memory port
 - reusable memory-port assertions for valid hold, stable stalled requests, and X/Z checks
 - descriptor-wrapper DMA performance reporting for `always_ready`, `fixed_latency`, and `random_backpressure` memory modes

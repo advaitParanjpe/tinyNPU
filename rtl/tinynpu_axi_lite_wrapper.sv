@@ -31,7 +31,9 @@ module tinynpu_axi_lite_wrapper (
   output logic [31:0] mem_addr,
   output logic [31:0] mem_wdata,
   input  logic [31:0] mem_rdata,
-  input  logic        mem_ready
+  input  logic        mem_ready,
+
+  output logic        irq
 );
 
   localparam logic [1:0] AXI_RESP_OKAY = 2'b00;
@@ -221,7 +223,8 @@ module tinynpu_axi_lite_wrapper (
     .mem_addr  (mem_addr),
     .mem_wdata (mem_wdata),
     .mem_rdata (mem_rdata),
-    .mem_ready (mem_ready)
+    .mem_ready (mem_ready),
+    .irq       (irq)
   );
 
 endmodule

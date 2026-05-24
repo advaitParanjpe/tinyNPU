@@ -15,6 +15,8 @@ module tb_tinynpu_axi_lite_wrapper;
   localparam logic [11:0] DMA_B_EXT_BASE = 12'h10c;
   localparam logic [11:0] DMA_C_EXT_BASE = 12'h110;
   localparam logic [11:0] DMA_CONFIG     = 12'h114;
+  localparam logic [11:0] DMA_IRQ_ENABLE = 12'h11c;
+  localparam logic [11:0] DMA_IRQ_STATUS = 12'h120;
 
   localparam int EXT_MEM_WORDS = 256;
   localparam int EXT_A0_BASE = 0;
@@ -50,6 +52,7 @@ module tb_tinynpu_axi_lite_wrapper;
   logic [31:0] mem_rdata;
   logic        mem_ready;
   logic        mem_ready_q;
+  logic        irq;
 
   logic [31:0] ext_mem [0:EXT_MEM_WORDS-1];
   int failures;
@@ -82,7 +85,8 @@ module tb_tinynpu_axi_lite_wrapper;
     .mem_addr      (mem_addr),
     .mem_wdata     (mem_wdata),
     .mem_rdata     (mem_rdata),
-    .mem_ready     (mem_ready)
+    .mem_ready     (mem_ready),
+    .irq           (irq)
   );
 
   tinynpu_mem_port_assertions u_mem_port_assertions (
@@ -550,6 +554,66 @@ module tb_tinynpu_axi_lite_wrapper;
     end
   endtask
 
+  task automatic run_axi_lite_irq_done;
+    int local_failures;
+    logic [31:0] data;
+    begin
+      local_failures = 0;
+      clear_dma_done_error();
+      axi_write(DMA_IRQ_ENABLE, 32'h1);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_dma_done();
+      if (irq !== 1'b1) begin
+        $display("FAIL axi_lite_irq_done: irq did not assert");
+        local_failures++;
+      end
+      axi_read(DMA_IRQ_STATUS, data);
+      if (data[0] !== 1'b1) begin
+        $display("FAIL axi_lite_irq_done: done pending missing irq_status=0x%08x", data);
+        local_failures++;
+      end
+      axi_write(DMA_CTRL, 32'h2);
+      if (irq !== 1'b0) begin
+        $display("FAIL axi_lite_irq_done: irq did not deassert after clear_done");
+        local_failures++;
+      end
+      axi_read(DMA_IRQ_STATUS, data);
+      if (data[0] !== 1'b0) begin
+        $display("FAIL axi_lite_irq_done: pending did not clear irq_status=0x%08x", data);
+        local_failures++;
+      end
+      axi_write(DMA_IRQ_ENABLE, 32'h0);
+      pass_or_fail("axi_lite_irq_done", local_failures);
+    end
+  endtask
+
+  task automatic run_axi_lite_irq_disabled;
+    int local_failures;
+    logic [31:0] data;
+    begin
+      local_failures = 0;
+      clear_dma_done_error();
+      axi_write(DMA_IRQ_ENABLE, 32'h0);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_dma_done();
+      if (irq !== 1'b0) begin
+        $display("FAIL axi_lite_irq_disabled: irq asserted while disabled");
+        local_failures++;
+      end
+      axi_read(DMA_IRQ_STATUS, data);
+      if (data[0] !== 1'b1) begin
+        $display("FAIL axi_lite_irq_disabled: done pending missing irq_status=0x%08x", data);
+        local_failures++;
+      end
+      clear_dma_done_error();
+      pass_or_fail("axi_lite_irq_disabled", local_failures);
+    end
+  endtask
+
   initial begin
     $dumpfile("build/sim/axi_lite/tinynpu_axi_lite_wrapper.vcd");
     $dumpvars(0, tb_tinynpu_axi_lite_wrapper);
@@ -589,6 +653,8 @@ module tb_tinynpu_axi_lite_wrapper;
     run_axi_lite_backpressure();
     run_axi_lite_invalid_unaligned();
     run_axi_lite_wstrb_behavior();
+    run_axi_lite_irq_done();
+    run_axi_lite_irq_disabled();
 
     $display("AXI-Lite wrapper tests passed: %0d", tests_passed);
     if (failures == 0) begin

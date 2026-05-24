@@ -1,5 +1,17 @@
 # Changelog
 
+## v26
+
+- Added descriptor done/error IRQ enable and pending registers to
+  `tinynpu_dma_descriptor_wrapper`.
+- Added an `irq` output to `tinynpu_dma_descriptor_wrapper` and passed it
+  through `tinynpu_axi_lite_wrapper`.
+- Added descriptor-wrapper and AXI-Lite tests for done IRQ assertion, pending
+  status, clear behavior, disabled IRQ behavior, and enable-after-done behavior.
+- Kept polling through `DMA_STATUS` supported.
+- Kept full AXI memory master, bursts, MAC changes, and core/APB wrapper port
+  changes out of scope.
+
 ## v25
 
 - Added optional `tinynpu_axi_lite_wrapper` for AXI4-Lite control-plane access

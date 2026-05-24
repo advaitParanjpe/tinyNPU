@@ -15,7 +15,8 @@ outstanding transaction support.
 `make synth-axi-lite` synthesizes the optional AXI4-Lite control wrapper around
 the DMA descriptor wrapper. This adds AXI-Lite control-plane handshaking only;
 the external memory interface remains the same abstract ready/valid port and is
-not a full AXI memory master.
+not a full AXI memory master. v26 adds descriptor done/error IRQ registers and
+an `irq` output to the descriptor and AXI-Lite wrappers.
 
 v22 added memory-port backpressure verification without changing this RTL. v23
 adds `tinynpu_mem_port_assertions` for simulation only; it is not read by the

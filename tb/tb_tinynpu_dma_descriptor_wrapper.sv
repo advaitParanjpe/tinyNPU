@@ -15,6 +15,8 @@ module tb_tinynpu_dma_descriptor_wrapper;
   localparam logic [11:0] DMA_B_EXT_BASE = 12'h10c;
   localparam logic [11:0] DMA_C_EXT_BASE = 12'h110;
   localparam logic [11:0] DMA_CONFIG     = 12'h114;
+  localparam logic [11:0] DMA_IRQ_ENABLE = 12'h11c;
+  localparam logic [11:0] DMA_IRQ_STATUS = 12'h120;
 
   logic        pclk;
   logic        presetn;
@@ -32,6 +34,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
   logic [31:0] mem_wdata;
   logic [31:0] mem_rdata;
   logic        mem_ready;
+  logic        irq;
 
   localparam int MEM_MODE_ALWAYS_READY        = 0;
   localparam int MEM_MODE_FIXED_LATENCY       = 1;
@@ -89,7 +92,8 @@ module tb_tinynpu_dma_descriptor_wrapper;
     .mem_addr  (mem_addr),
     .mem_wdata (mem_wdata),
     .mem_rdata (mem_rdata),
-    .mem_ready (mem_ready)
+    .mem_ready (mem_ready),
+    .irq       (irq)
   );
 
   tinynpu_mem_port_assertions u_mem_port_assertions (
@@ -420,6 +424,12 @@ module tb_tinynpu_dma_descriptor_wrapper;
   task automatic clear_dma_done;
     begin
       apb_write(DMA_CTRL, 32'h2);
+    end
+  endtask
+
+  task automatic clear_dma_done_error;
+    begin
+      apb_write(DMA_CTRL, 32'h6);
     end
   endtask
 
@@ -881,6 +891,123 @@ module tb_tinynpu_dma_descriptor_wrapper;
     end
   endtask
 
+  task automatic run_desc_irq_disabled_no_assert;
+    int local_failures;
+    logic [31:0] irq_status;
+    begin
+      local_failures = 0;
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+      clear_dma_done_error();
+      apb_write(DMA_IRQ_ENABLE, 32'h0);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done_perf("desc_irq_disabled_no_assert");
+      if (irq !== 1'b0) begin
+        $display("FAIL desc_irq_disabled_no_assert: irq asserted while disabled");
+        local_failures = local_failures + 1;
+      end
+      apb_read(DMA_IRQ_STATUS, irq_status);
+      if (irq_status[0] !== 1'b1) begin
+        $display("FAIL desc_irq_disabled_no_assert: done pending not set irq_status=0x%08x", irq_status);
+        local_failures = local_failures + 1;
+      end
+      clear_dma_done_error();
+      apb_write(DMA_IRQ_ENABLE, 32'h0);
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_irq_disabled_no_assert");
+      end else begin
+        failures = failures + local_failures;
+      end
+    end
+  endtask
+
+  task automatic run_desc_irq_done_assert_clear;
+    int local_failures;
+    logic [31:0] irq_status;
+    begin
+      local_failures = 0;
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+      clear_dma_done_error();
+      apb_write(DMA_IRQ_ENABLE, 32'h1);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done_perf("desc_irq_done_assert_clear");
+      if (irq !== 1'b1) begin
+        $display("FAIL desc_irq_done_assert_clear: irq did not assert");
+        local_failures = local_failures + 1;
+      end
+      apb_read(DMA_IRQ_STATUS, irq_status);
+      if (irq_status[0] !== 1'b1) begin
+        $display("FAIL desc_irq_done_assert_clear: done pending not set irq_status=0x%08x", irq_status);
+        local_failures = local_failures + 1;
+      end
+      clear_dma_done();
+      if (irq !== 1'b0) begin
+        $display("FAIL desc_irq_done_assert_clear: irq did not clear");
+        local_failures = local_failures + 1;
+      end
+      apb_read(DMA_IRQ_STATUS, irq_status);
+      if (irq_status[0] !== 1'b0) begin
+        $display("FAIL desc_irq_done_assert_clear: pending did not clear irq_status=0x%08x", irq_status);
+        local_failures = local_failures + 1;
+      end
+      apb_write(DMA_IRQ_ENABLE, 32'h0);
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_irq_done_assert_clear");
+      end else begin
+        failures = failures + local_failures;
+      end
+    end
+  endtask
+
+  task automatic run_desc_irq_enable_after_done;
+    int local_failures;
+    logic [31:0] irq_status;
+    begin
+      local_failures = 0;
+      set_mem_model_mode(MEM_MODE_ALWAYS_READY);
+      clear_dma_done_error();
+      apb_write(DMA_IRQ_ENABLE, 32'h0);
+      clear_ext_mem(32'h0);
+      fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
+      start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
+      wait_desc_done_perf("desc_irq_enable_after_done");
+      if (irq !== 1'b0) begin
+        $display("FAIL desc_irq_enable_after_done: irq asserted before enable");
+        local_failures = local_failures + 1;
+      end
+      apb_read(DMA_IRQ_STATUS, irq_status);
+      if (irq_status[0] !== 1'b1) begin
+        $display("FAIL desc_irq_enable_after_done: pending missing irq_status=0x%08x", irq_status);
+        local_failures = local_failures + 1;
+      end
+      apb_write(DMA_IRQ_ENABLE, 32'h1);
+      if (irq !== 1'b1) begin
+        $display("FAIL desc_irq_enable_after_done: irq did not assert after enable");
+        local_failures = local_failures + 1;
+      end
+      clear_dma_done();
+      if (irq !== 1'b0) begin
+        $display("FAIL desc_irq_enable_after_done: irq did not clear");
+        local_failures = local_failures + 1;
+      end
+      apb_write(DMA_IRQ_ENABLE, 32'h0);
+
+      if (local_failures == 0) begin
+        tests_passed = tests_passed + 1;
+        $display("PASS desc_irq_enable_after_done");
+      end else begin
+        failures = failures + local_failures;
+      end
+    end
+  endtask
+
   task automatic run_desc_start_while_busy;
     int local_failures;
     logic [31:0] status;
@@ -924,6 +1051,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
         $display("FAIL desc_invalid_access: invalid descriptor read=0x%08x", data);
         local_failures = local_failures + 1;
       end
+      apb_write(DMA_IRQ_STATUS, 32'hffff_ffff);
       apb_read(DMA_A_EXT_BASE, data);
       if (data !== 32'h1234_5678) begin
         $display("FAIL desc_invalid_access: descriptor register corrupted=0x%08x", data);
@@ -1051,6 +1179,9 @@ module tb_tinynpu_dma_descriptor_wrapper;
     run_desc_dma_random_backpressure_identity();
     run_desc_dma_random_backpressure_back_to_back();
     run_desc_dma_mem_protocol_stability();
+    run_desc_irq_disabled_no_assert();
+    run_desc_irq_done_assert_clear();
+    run_desc_irq_enable_after_done();
 
     print_perf_summary();
     $display("DMA descriptor-wrapper tests passed: %0d", tests_passed);

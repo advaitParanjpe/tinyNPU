@@ -8,6 +8,7 @@
 - APB-lite-style wrapper around the core.
 - Synthesizable DMA descriptor wrapper with DMA FSM and abstract memory port.
 - Optional AXI4-Lite control wrapper around the DMA descriptor wrapper.
+- Descriptor done IRQ support on the descriptor and AXI-Lite wrappers.
 - Fixed-latency and deterministic backpressure tests for the abstract memory port.
 - Reusable simulation-only checker for the abstract memory port.
 - Testbench-only DMA-style external-memory movement model.
@@ -23,7 +24,7 @@
 
 ## Later
 
-- Interrupt/status/error refinement.
+- Error IRQ stimulus and broader interrupt/status refinement.
 - Burst transfers and full memory-bus backpressure handling.
 - SRAM macro integration.
 - Formal checks for control/status behavior.

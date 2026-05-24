@@ -18,6 +18,8 @@ top, not the MAC datapath comparison.
 | v24 | `tinynpu_apb_wrapper` | row4 | 14560 | Generic Yosys only; APB wrapper around default core |
 | v24 | `tinynpu_dma_descriptor_wrapper` | row4 | 17054 | Generic Yosys only; descriptor registers plus DMA FSM, abstract external memory port, and APB-wrapped core; no AXI |
 | v25 | `tinynpu_axi_lite_wrapper` | row4 | 17356 | Generic Yosys only; AXI4-Lite control wrapper plus descriptor wrapper and abstract memory port; no full AXI memory master |
+| v26 | `tinynpu_dma_descriptor_wrapper` | row4 | 17091 | Adds descriptor done/error IRQ registers and an `irq` output; no AXI |
+| v26 | `tinynpu_axi_lite_wrapper` | row4 | 17393 | Passes descriptor `irq` through AXI4-Lite control wrapper; no full AXI memory master |
 
 The descriptor-driven APB DMA-style testbench still exists as a higher-level
 simulation model. The synthesizable descriptor wrapper now has its own abstract
@@ -41,6 +43,10 @@ v25 adds AXI4-Lite control-wrapper simulation with `make sim-axi-lite`. The
 AXI-Lite wrapper can program descriptor registers, access the forwarded core
 region, start DMA, poll status, and read results while the data-moving memory
 port remains the existing abstract ready/valid interface.
+
+v26 adds done IRQ tests to both descriptor-wrapper and AXI-Lite wrapper
+simulations. Error IRQ logic is present, but not stimulus-verified because the
+current DMA wrapper has no normal memory-error source.
 
 Relative values use the default `row4` variant as the baseline. Synthesis is
 generic Yosys only, not technology-mapped PPA.

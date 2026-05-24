@@ -40,6 +40,9 @@ TEST_NAMES = (
     "desc_dma_random_backpressure_identity",
     "desc_dma_random_backpressure_back_to_back",
     "desc_dma_mem_protocol_stability",
+    "desc_irq_disabled_no_assert",
+    "desc_irq_done_assert_clear",
+    "desc_irq_enable_after_done",
 )
 
 FSM_STATES = (
@@ -93,6 +96,13 @@ def write_summary(status, tests_passed=0, passed_names=None, sim_stdout="", perf
         "mem_port_assertions_enabled": "Memory-port assertions: enabled" in sim_stdout,
         "performance_reporting_enabled": perf_summary is not None,
         "perf_summary_path": str(PERF_SUMMARY_PATH.relative_to(REPO_ROOT)) if perf_summary is not None else None,
+        "irq_supported": True,
+        "irq_tests_passed": sum(1 for name in (passed_names or []) if name.startswith("desc_irq_")),
+        "irq_done_verified": (
+            "desc_irq_done_assert_clear" in (passed_names or [])
+            and "desc_irq_enable_after_done" in (passed_names or [])
+        ),
+        "irq_error_verified": False,
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
         "notes": notes or "Uses simple abstract ready/valid memory port; not AXI",

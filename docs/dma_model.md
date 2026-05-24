@@ -77,10 +77,11 @@ Outputs are written under `build/sim/apb_dma/`, including:
 ## Limitations
 
 - No AXI master.
-- No AXI/AHB protocol, bursts, arbitration, or descriptor interrupts.
+- No AXI/AHB protocol, bursts, or arbitration.
 - No burst transactions.
 - No bus arbitration.
-- No interrupts.
+- No interrupts in this testbench-only model. Synthesizable descriptor-wrapper
+  IRQ support is documented separately in `docs/dma_descriptor_wrapper.md`.
 - No memory latency model yet.
 
 ## Future Path

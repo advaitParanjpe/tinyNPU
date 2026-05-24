@@ -25,6 +25,9 @@
   core identity, descriptor-programmed DMA identity/mixed-signed operation,
   AXI-Lite channel stalls, invalid/unaligned access, and full-word-only WSTRB
   handling
+- Descriptor-wrapper and AXI-Lite done IRQ behavior: disabled IRQ stays low,
+  done IRQ pending is reported, enabling after done asserts IRQ, and
+  `DMA_CTRL.clear_done` clears pending/IRQ
 - Descriptor-driven DMA-style APB system-flow behavior: descriptor programming,
   external-memory load of A/B, accelerator start, STATUS.done polling,
   C store-back, back-to-back operations, start while descriptor model is busy,
@@ -61,6 +64,8 @@
 - Functional coverage metrics
 - Full APB protocol coverage
 - Full AXI/AHB DMA data-mover behavior
+- Error IRQ stimulus, because the current DMA wrapper has no normal error
+  source
 - Longer memory-port backpressure seed sweeps
 - Randomized bus timing with backpressure, since `bus_ready` is currently always high
 - Larger matrix sizes or configurable dimensions

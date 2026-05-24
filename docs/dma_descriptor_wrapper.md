@@ -26,6 +26,7 @@ The wrapper exposes this single-beat ready/valid memory port:
 | `mem_wdata[31:0]` | output | write data for stores |
 | `mem_rdata[31:0]` | input | read data for loads |
 | `mem_ready` | input | transaction accepted/data valid |
+| `irq` | output | descriptor done/error interrupt request |
 
 `mem_valid` remains asserted until `mem_ready`. `mem_addr`, `mem_we`, and
 `mem_wdata` remain stable while `mem_valid && !mem_ready`. For reads,
@@ -38,7 +39,7 @@ strobes, bursts, outstanding transactions, or memory error responses.
 | Address range | Behavior |
 | --- | --- |
 | `0x000`-`0x0ff` | Forwarded to `tinynpu_apb_wrapper` using `paddr[7:0]` |
-| `0x100`-`0x11f` | Handled by descriptor registers in this wrapper |
+| `0x100`-`0x120` | Handled by descriptor registers in this wrapper |
 
 The wrapper uses a 12-bit APB address so descriptor registers can live above the
 existing tinyNPU 8-bit APB address space.
@@ -53,9 +54,11 @@ existing tinyNPU 8-bit APB address space.
 | `0x10c` | `DMA_B_EXT_BASE` | external memory word address for B |
 | `0x110` | `DMA_C_EXT_BASE` | external memory word address for C |
 | `0x114` | `DMA_CONFIG` | reserved configuration register |
+| `0x11c` | `DMA_IRQ_ENABLE` | bit 0: done IRQ enable; bit 1: error IRQ enable |
+| `0x120` | `DMA_IRQ_STATUS` | bit 0: done IRQ pending; bit 1: error IRQ pending |
 
 Invalid descriptor reads return `0`. Invalid descriptor writes are ignored.
-`pslverr` remains `0`.
+Writes to `DMA_IRQ_STATUS` are ignored. `pslverr` remains `0`.
 
 ## Current Behavior
 
@@ -79,6 +82,26 @@ A start write while busy is ignored and does not set error.
 
 `DMA_CTRL.clear_done` clears sticky done. `DMA_CTRL.clear_error` clears error.
 The current wrapper does not raise error internally.
+
+## Interrupts
+
+v26 adds an `irq` output for descriptor done/error events:
+
+```text
+irq = (DMA_IRQ_ENABLE.done && DMA_IRQ_STATUS.done_pending) ||
+      (DMA_IRQ_ENABLE.error && DMA_IRQ_STATUS.error_pending)
+```
+
+`done_irq_pending` is set when the DMA FSM reaches done. `error_irq_pending` is
+set if the wrapper enters its internal error path. The current design does not
+have a normal memory-error or timeout source, so done IRQ behavior is verified
+and error IRQ logic is present but not stimulus-verified.
+
+Reset clears `DMA_IRQ_ENABLE`, IRQ pending bits, and `irq`. Reading
+`DMA_IRQ_STATUS` does not clear pending bits. `DMA_IRQ_STATUS` writes are
+ignored in v26. Software clears done pending with `DMA_CTRL.clear_done` and
+clears error pending with `DMA_CTRL.clear_error`. Polling `DMA_STATUS` remains
+supported.
 
 Forwarded core reads preserve the one-wait-state read behavior of
 `tinynpu_apb_wrapper` while the descriptor FSM is idle.
@@ -129,6 +152,6 @@ memory port, not AXI timing.
 ## Future Path
 
 - Replace the abstract memory port with a real SoC memory bus master.
-- Add interrupt/status/error handling.
+- Add a real error source and error IRQ stimulus.
 - Add burst transfers, byte strobes, memory error responses, and longer
   randomized backpressure regressions.

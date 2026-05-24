@@ -18,7 +18,9 @@ module tinynpu_dma_descriptor_wrapper (
   output logic [31:0] mem_addr,
   output logic [31:0] mem_wdata,
   input  logic [31:0] mem_rdata,
-  input  logic        mem_ready
+  input  logic        mem_ready,
+
+  output logic        irq
 );
 
   localparam logic [11:0] DMA_CTRL       = 12'h100;
@@ -27,6 +29,8 @@ module tinynpu_dma_descriptor_wrapper (
   localparam logic [11:0] DMA_B_EXT_BASE = 12'h10c;
   localparam logic [11:0] DMA_C_EXT_BASE = 12'h110;
   localparam logic [11:0] DMA_CONFIG     = 12'h114;
+  localparam logic [11:0] DMA_IRQ_ENABLE = 12'h11c;
+  localparam logic [11:0] DMA_IRQ_STATUS = 12'h120;
 
   localparam logic [7:0] CORE_ADDR_CTRL   = 8'h00;
   localparam logic [7:0] CORE_ADDR_STATUS = 8'h04;
@@ -72,6 +76,9 @@ module tinynpu_dma_descriptor_wrapper (
   logic [31:0] dma_b_ext_base;
   logic [31:0] dma_c_ext_base;
   logic [31:0] dma_config;
+  logic [1:0]  dma_irq_enable;
+  logic        done_irq_pending;
+  logic        error_irq_pending;
   logic [2:0]  dma_state;
   logic [2:0]  dma_phase;
   logic [3:0]  dma_idx;
@@ -82,7 +89,7 @@ module tinynpu_dma_descriptor_wrapper (
   logic [31:0] dma_i8_wdata;
 
   assign core_sel   = (paddr[11:8] == 4'h0);
-  assign desc_sel   = (paddr >= 12'h100) && (paddr <= 12'h11f);
+  assign desc_sel   = (paddr >= 12'h100) && (paddr <= 12'h120);
   assign apb_access = psel && penable;
   assign external_core_access = core_sel && !dma_busy;
   assign internal_core_access = (dma_state == DMA_START_CORE) ||
@@ -93,6 +100,8 @@ module tinynpu_dma_descriptor_wrapper (
   assign pready  = (core_sel && !dma_busy) ? core_pready : 1'b1;
   assign pslverr = 1'b0;
   assign prdata  = core_sel ? (dma_busy ? 32'h0 : core_prdata) : desc_prdata;
+  assign irq     = (dma_irq_enable[0] && done_irq_pending) ||
+                   (dma_irq_enable[1] && error_irq_pending);
 
   assign core_psel    = internal_core_access ? 1'b1 : (psel && external_core_access);
   assign core_penable = internal_core_access ? 1'b1 : penable;
@@ -197,6 +206,9 @@ module tinynpu_dma_descriptor_wrapper (
       dma_b_ext_base <= 32'h0;
       dma_c_ext_base <= 32'h0;
       dma_config     <= 32'h0;
+      dma_irq_enable <= 2'b00;
+      done_irq_pending  <= 1'b0;
+      error_irq_pending <= 1'b0;
       dma_state      <= DMA_IDLE;
       dma_phase      <= PHASE_MEM_READ;
       dma_idx        <= 4'h0;
@@ -207,9 +219,11 @@ module tinynpu_dma_descriptor_wrapper (
           DMA_CTRL: begin
             if (pwdata[1]) begin
               dma_done <= 1'b0;
+              done_irq_pending <= 1'b0;
             end
             if (pwdata[2]) begin
               dma_error <= 1'b0;
+              error_irq_pending <= 1'b0;
             end
             if (pwdata[0] && !dma_busy && (dma_state == DMA_IDLE)) begin
               dma_busy    <= 1'b1;
@@ -224,6 +238,7 @@ module tinynpu_dma_descriptor_wrapper (
           DMA_B_EXT_BASE: dma_b_ext_base <= pwdata;
           DMA_C_EXT_BASE: dma_c_ext_base <= pwdata;
           DMA_CONFIG:     dma_config     <= pwdata;
+          DMA_IRQ_ENABLE: dma_irq_enable <= pwdata[1:0];
           default: begin
           end
         endcase
@@ -325,6 +340,7 @@ module tinynpu_dma_descriptor_wrapper (
         DMA_DONE: begin
           dma_busy  <= 1'b0;
           dma_done  <= 1'b1;
+          done_irq_pending <= 1'b1;
           dma_idx   <= 4'h0;
           dma_phase <= PHASE_MEM_READ;
           dma_state <= DMA_IDLE;
@@ -333,6 +349,7 @@ module tinynpu_dma_descriptor_wrapper (
         default: begin
           dma_busy    <= 1'b0;
           dma_error   <= 1'b1;
+          error_irq_pending <= 1'b1;
           dma_state   <= DMA_IDLE;
           dma_phase   <= PHASE_MEM_READ;
           dma_idx     <= 4'h0;
@@ -350,6 +367,8 @@ module tinynpu_dma_descriptor_wrapper (
             DMA_B_EXT_BASE: desc_prdata <= dma_b_ext_base;
             DMA_C_EXT_BASE: desc_prdata <= dma_c_ext_base;
             DMA_CONFIG:     desc_prdata <= dma_config;
+            DMA_IRQ_ENABLE: desc_prdata <= {30'h0, dma_irq_enable};
+            DMA_IRQ_STATUS: desc_prdata <= {30'h0, error_irq_pending, done_irq_pending};
             default:        desc_prdata <= 32'h0;
           endcase
         end else begin

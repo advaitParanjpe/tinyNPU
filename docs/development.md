@@ -28,7 +28,8 @@ make synth-axi-lite
 ```
 
 `make sim-dma-desc` also writes DMA performance data to
-`build/sim/dma_desc_wrapper/perf_summary.json`.
+`build/sim/dma_desc_wrapper/perf_summary.json` and verifies descriptor done IRQ
+behavior. `make sim-axi-lite` verifies the AXI-Lite pass-through IRQ path.
 
 Run the full variant comparison before commit:
 

@@ -74,7 +74,7 @@ Purpose:
 
 Optional APB-lite-style wrapper with a 12-bit APB address space. It forwards
 `0x000`-`0x0ff` to `tinynpu_apb_wrapper` and implements descriptor registers at
-`0x100`-`0x11f`.
+`0x100`-`0x120`, including descriptor IRQ enable/status registers.
 
 The descriptor start behavior runs a small DMA-control FSM:
 
@@ -112,7 +112,8 @@ Purpose:
 Optional AXI4-Lite slave adapter around `tinynpu_dma_descriptor_wrapper`. It
 translates single-beat AXI4-Lite control reads and writes into the descriptor
 wrapper's APB-style register interface. The abstract external memory port passes
-through unchanged.
+through unchanged, and the descriptor `irq` output is passed through as an
+AXI-Lite wrapper output.
 
 This is a control-plane wrapper only. It has no full AXI memory master, no
 bursts, no IDs, and no multiple outstanding transactions. It returns OKAY
@@ -155,7 +156,8 @@ Targets:
 
 - Full AXI/AHB memory master.
 - Burst transfers.
-- Byte strobes, memory error handling, and descriptor interrupts.
+- Byte strobes on the abstract memory port, memory error handling, and full
+  interrupt-controller integration.
 - Interrupt output.
 - SRAM macro integration.
 - Technology-mapped timing/PPA.

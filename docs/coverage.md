@@ -50,6 +50,10 @@ path, number of passed coverage categories, and known gap count.
 - DMA memory-port backpressure smoke tests through `make sim-dma-desc`,
   including fixed-latency memory, deterministic random backpressure, and
   stalled-request stability checking.
+- Descriptor-wrapper done IRQ smoke tests through `make sim-dma-desc`,
+  including disabled IRQ behavior, done pending, enable-after-done, and
+  clear-done behavior.
+- AXI-Lite done IRQ smoke tests through `make sim-axi-lite`.
 - Reusable memory-port assertions are compiled into `make sim-dma-desc` with
   `TINYNPU_SIM_ASSERT`.
 - DMA descriptor-wrapper performance reporting emits per-mode cycle summaries
@@ -62,3 +66,5 @@ path, number of passed coverage categories, and known gap count.
 - No SRAM macro or memory timing coverage yet.
 - No formal proof yet.
 - Only fixed 4x4 matrix size currently tested.
+- Error IRQ logic is present but not stimulus-covered because there is no
+  normal DMA error source yet.

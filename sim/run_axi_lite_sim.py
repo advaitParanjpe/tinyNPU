@@ -20,6 +20,8 @@ TEST_NAMES = (
     "axi_lite_backpressure",
     "axi_lite_invalid_unaligned",
     "axi_lite_wstrb_behavior",
+    "axi_lite_irq_done",
+    "axi_lite_irq_disabled",
 )
 
 
@@ -46,6 +48,9 @@ def write_summary(status, tests_passed=0, passed_names=None, notes=None):
         "mac_variant": "row4",
         "axi_lite_control": True,
         "full_axi_memory_master": False,
+        "irq_supported": True,
+        "irq_tests_passed": sum(1 for name in (passed_names or []) if name.startswith("axi_lite_irq_")),
+        "irq_done_verified": "axi_lite_irq_done" in (passed_names or []),
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
         "notes": notes

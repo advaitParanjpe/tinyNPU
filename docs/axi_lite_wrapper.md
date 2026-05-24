@@ -7,6 +7,7 @@ descriptor wrapper's APB-lite-style interface.
 
 This is only a control wrapper. The DMA data path still uses the existing
 abstract ready/valid external memory port. There is no full AXI memory master.
+The wrapper also passes through the descriptor wrapper's `irq` output.
 
 ## Layering
 
@@ -59,7 +60,7 @@ The AXI-Lite address map matches `tinynpu_dma_descriptor_wrapper`.
 | Address range | Behavior |
 | --- | --- |
 | `0x000`-`0x0ff` | forwarded core region through the APB wrapper |
-| `0x100`-`0x11f` | DMA descriptor/status register region |
+| `0x100`-`0x120` | DMA descriptor/status/IRQ register region |
 
 Descriptor registers:
 
@@ -71,6 +72,23 @@ Descriptor registers:
 | `0x10c` | `DMA_B_EXT_BASE` |
 | `0x110` | `DMA_C_EXT_BASE` |
 | `0x114` | `DMA_CONFIG` |
+| `0x11c` | `DMA_IRQ_ENABLE` |
+| `0x120` | `DMA_IRQ_STATUS` |
+
+## Interrupt Output
+
+v26 adds an `irq` output to `tinynpu_axi_lite_wrapper`. It is the descriptor
+wrapper IRQ passed through unchanged:
+
+- `DMA_IRQ_ENABLE[0]` enables done IRQs.
+- `DMA_IRQ_ENABLE[1]` enables error IRQs.
+- `DMA_IRQ_STATUS[0]` is sticky done pending.
+- `DMA_IRQ_STATUS[1]` is sticky error pending.
+- `DMA_CTRL.clear_done` clears done status and done IRQ pending.
+- `DMA_CTRL.clear_error` clears error status and error IRQ pending.
+- `DMA_IRQ_STATUS` reads do not clear pending bits; writes are ignored.
+
+Polling `DMA_STATUS` remains supported.
 
 ## External Memory Port
 
@@ -100,7 +118,8 @@ make sim-axi-lite
 The testbench checks descriptor register read/write, forwarded core operation,
 descriptor-programmed DMA identity and mixed-signed matrix multiplies, AXI-Lite
 channel stalls, invalid/unaligned accesses, and the full-word-only `WSTRB`
-policy.
+policy. v26 also checks done IRQ assertion, pending status, clear behavior, and
+disabled-IRQ behavior.
 
 ## Synthesis
 
@@ -120,5 +139,5 @@ variant through the wrapped tinyNPU core.
 - multiple outstanding transactions
 - AXI IDs
 - interconnect integration
-- interrupt output
+- full AXI interrupt-controller integration
 - memory error responses
