@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v16 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v17 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -8,7 +8,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Fixed 4x4 signed int8 matrix multiply: `C = A x B`, with signed int32 C results.
 - Simple always-ready register bus with CTRL/STATUS, A/B scratchpads, and C result storage.
 - Optional APB-lite-style wrapper around the existing simple-bus core.
-- DMA-style APB system simulation model using a testbench-side external memory array.
+- DMA-style APB system simulation model with testbench-side descriptor registers.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
 - Directed, edge-case, bus protocol, control/status, and deterministic random golden-model verification.
@@ -86,9 +86,10 @@ The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
 There is no AXI, synthesizable DMA, SRAM macro, or real external memory
-interface in v16. APB is available only as an optional wrapper around the
-existing simple-bus core. The DMA-style flow is a simulation model that moves
-data between a testbench memory array and tinyNPU through APB transactions.
+interface in v17. APB is available only as an optional wrapper around the
+existing simple-bus core. The DMA-style flow is a simulation model that uses
+testbench-side descriptor registers to move data between a testbench memory
+array and tinyNPU through APB transactions.
 
 ## Register Map
 
@@ -155,7 +156,7 @@ The current self-checking Icarus simulation covers:
 - control/status behavior: start while busy, sticky done, clear done, new start after done
 - bus protocol behavior: always-ready signaling, A/B readback, C read-only storage, ignored CTRL bits, unaligned access handling
 - focused APB wrapper tests for identity, mixed signed, invalid/unaligned access, C read-only behavior, start while busy, and reset
-- DMA-style APB system-flow tests for external-memory load, compute, poll, and store-back behavior
+- descriptor-driven DMA-style APB system-flow tests for external-memory load, compute, poll, and store-back behavior
 - reset mid-operation recovery
 - invalid bus read/write behavior
 - 50 deterministic random golden-model tests by default
@@ -212,7 +213,7 @@ make precommit
 ```
 
 `make precommit` runs `make check`, `make golden`, `make compare`, APB wrapper
-simulation/synthesis, and the APB DMA-style simulation model. See
+simulation/synthesis, and the descriptor-driven APB DMA-style simulation model. See
 `docs/development.md` for the recommended local workflow.
 
 ## Results Artifacts

@@ -6,19 +6,19 @@ area, timing, or power numbers.
 
 | version | variant | datapath | max latency cycles | total cells | relative latency | relative cells | coverage-style status | notes |
 | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
-| v16 | row4 | 4-lane row MAC | 26 | 14514 | 1.00x | 1.00x | scenario summary generated | Default datapath; generic gates only |
-| v16 | serial | serial MAC baseline | 66 | 10347 | 2.54x | 0.71x | scenario summary generated | Lower cell count, higher latency; generic gates only |
-| v16 | full16 | 16-lane full parallel MAC | 8 | 34149 | 0.31x | 2.35x | scenario summary generated | Lowest latency, highest generic cell count |
+| v17 | row4 | 4-lane row MAC | 26 | 14514 | 1.00x | 1.00x | scenario summary generated | Default datapath; generic gates only |
+| v17 | serial | serial MAC baseline | 66 | 10347 | 2.54x | 0.71x | scenario summary generated | Lower cell count, higher latency; generic gates only |
+| v17 | full16 | 16-lane full parallel MAC | 8 | 34149 | 0.31x | 2.35x | scenario summary generated | Lowest latency, highest generic cell count |
 
 APB wrapper synthesis is tracked separately because it changes the integration
 top, not the MAC datapath comparison.
 
 | version | top | wrapped core | total cells | notes |
 | --- | --- | --- | ---: | --- |
-| v16 | `tinynpu_apb_wrapper` | row4 | 14560 | Generic Yosys only; APB wrapper around default core |
+| v17 | `tinynpu_apb_wrapper` | row4 | 14560 | Generic Yosys only; APB wrapper around default core |
 
-The DMA-style APB testbench is simulation-only and does not add synthesizable
-DMA RTL, so it has no synthesis row.
+The descriptor-driven DMA-style APB testbench is simulation-only and does not
+add synthesizable descriptor or DMA RTL, so it has no synthesis row.
 
 Relative values use the default `row4` variant as the baseline. Synthesis is
 generic Yosys only, not technology-mapped PPA.

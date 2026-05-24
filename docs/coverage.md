@@ -41,12 +41,12 @@ path, number of passed coverage categories, and known gap count.
 - Checker suite: busy/done mutex, start ignored while busy, bounded done after
   start, reset clears status, C stable while done is sticky.
 - Variant regression: `serial`, `row4`, and `full16` through `make compare`.
-- APB DMA-style system-flow smoke tests through `make sim-apb-dma`.
+- APB DMA-style descriptor-flow smoke tests through `make sim-apb-dma`.
 
 ## Known Gaps
 
 - No full AXI/APB protocol coverage yet.
-- No real DMA RTL coverage yet.
+- No real DMA RTL or synthesizable descriptor-register coverage yet.
 - No SRAM macro or memory timing coverage yet.
 - No formal proof yet.
 - Only fixed 4x4 matrix size currently tested.

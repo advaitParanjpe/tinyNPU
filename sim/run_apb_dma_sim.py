@@ -13,10 +13,21 @@ BUILD_DIR = REPO_ROOT / "build" / "sim" / "apb_dma"
 SUMMARY_PATH = BUILD_DIR / "sim_summary.json"
 
 TEST_NAMES = (
-    "dma_identity",
-    "dma_mixed_signed",
-    "dma_back_to_back",
-    "dma_external_memory_unchanged",
+    "dma_desc_identity",
+    "dma_desc_mixed_signed",
+    "dma_desc_back_to_back",
+    "dma_desc_start_while_busy",
+    "dma_desc_invalid_access",
+    "dma_desc_external_memory_unchanged",
+)
+
+DESCRIPTOR_REGISTERS = (
+    "DMA_CTRL",
+    "DMA_STATUS",
+    "DMA_A_EXT_BASE",
+    "DMA_B_EXT_BASE",
+    "DMA_C_EXT_BASE",
+    "DMA_CONFIG",
 )
 
 
@@ -34,9 +45,11 @@ def write_summary(status, tests_passed=0, passed_names=None, notes=None):
         "testbench": "tb_tinynpu_apb_dma_model",
         "mac_variant": "row4",
         "dma_model": True,
+        "descriptor_model": True,
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
-        "notes": notes or "DMA-style testbench model only; no synthesizable DMA RTL",
+        "descriptor_registers": list(DESCRIPTOR_REGISTERS),
+        "notes": notes or "Descriptor registers are simulation-only; no synthesizable DMA RTL",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     BUILD_DIR.mkdir(parents=True, exist_ok=True)

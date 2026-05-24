@@ -1,5 +1,12 @@
 # Changelog
 
+## v17
+
+- Added simulation-only DMA descriptor registers to the APB DMA-model flow.
+- Updated `make sim-apb-dma` to exercise descriptor-driven load, compute,
+  poll, and store-back behavior.
+- Kept descriptor registers out of synthesizable RTL.
+
 ## v16
 
 - Added a DMA-style APB system simulation model using testbench external memory.

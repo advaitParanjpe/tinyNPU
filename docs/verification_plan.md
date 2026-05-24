@@ -13,9 +13,10 @@
   access handling
 - Focused APB wrapper behavior: identity, mixed signed, invalid/unaligned
   access, C read-only behavior, start while busy, and reset
-- DMA-style APB system-flow behavior: external-memory load of A/B, accelerator
-  start, STATUS.done polling, C store-back, back-to-back operations, and
-  unchanged unrelated external-memory regions
+- Descriptor-driven DMA-style APB system-flow behavior: descriptor programming,
+  external-memory load of A/B, accelerator start, STATUS.done polling,
+  C store-back, back-to-back operations, start while descriptor model is busy,
+  invalid descriptor access, and unchanged unrelated external-memory regions
 - Reset behavior, including reset during an active operation
 - Invalid bus behavior: unmapped reads return zero and unmapped writes are ignored
 - Deterministic random golden-model tests generated from a seed
@@ -45,7 +46,7 @@
 
 - Functional coverage metrics
 - Full APB protocol coverage
-- Real DMA RTL behavior or descriptor programming
+- Real DMA RTL behavior or synthesizable descriptor programming
 - Randomized bus timing with backpressure, since `bus_ready` is currently always high
 - Larger matrix sizes or configurable dimensions
 - Exhaustive signed int8 operand coverage

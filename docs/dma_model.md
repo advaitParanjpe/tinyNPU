@@ -5,13 +5,35 @@ tinyNPU using testbench tasks and a simulated external memory array. It is not
 synthesizable DMA RTL.
 
 The model instantiates `tinynpu_apb_wrapper` and moves data through APB
-transactions:
+transactions. In v17, tests program simulation-only descriptor registers first,
+then the descriptor model performs the movement sequence:
 
-1. Load A from external memory into the tinyNPU A scratchpad.
-2. Load B from external memory into the tinyNPU B scratchpad.
-3. Start the accelerator through CTRL.
-4. Poll STATUS.done.
-5. Read C through APB and store it back into external memory.
+1. Software writes A/B/C external-memory base addresses.
+2. Software writes `DMA_CTRL.start`.
+3. The testbench descriptor model loads A into the tinyNPU A scratchpad.
+4. The model loads B into the tinyNPU B scratchpad.
+5. The model starts the accelerator through CTRL.
+6. The model polls STATUS.done.
+7. The model reads C through APB and stores it back into external memory.
+8. The descriptor model sets `DMA_STATUS.done`.
+
+The descriptor registers are testbench-side model state only. They are not part
+of `tinynpu_apb_wrapper`, `tinynpu_top`, or any synthesizable product RTL.
+
+## Descriptor Register Map
+
+| Address | Name | Description |
+| --- | --- | --- |
+| `0x100` | `DMA_CTRL` | bit 0: start; bit 1: clear done/error |
+| `0x104` | `DMA_STATUS` | bit 0: busy; bit 1: done; bit 2: error |
+| `0x108` | `DMA_A_EXT_BASE` | external memory word address for A |
+| `0x10c` | `DMA_B_EXT_BASE` | external memory word address for B |
+| `0x110` | `DMA_C_EXT_BASE` | external memory word address for C |
+| `0x114` | `DMA_CONFIG` | reserved model register |
+
+Invalid descriptor reads return `0`. Invalid descriptor writes are ignored.
+Writing start while the descriptor model is busy is ignored and does not set
+error.
 
 ## External Memory Layout
 
@@ -42,23 +64,26 @@ Outputs are written under `build/sim/apb_dma/`, including:
 
 ## Current Tests
 
-- `dma_identity`
-- `dma_mixed_signed`
-- `dma_back_to_back`
-- `dma_external_memory_unchanged`
+- `dma_desc_identity`
+- `dma_desc_mixed_signed`
+- `dma_desc_back_to_back`
+- `dma_desc_start_while_busy`
+- `dma_desc_invalid_access`
+- `dma_desc_external_memory_unchanged`
 
 ## Limitations
 
 - No real DMA controller RTL.
+- No real descriptor-register RTL.
 - No AXI master.
 - No burst transactions.
-- No descriptor registers.
 - No bus arbitration.
+- No interrupts.
 - No memory latency model yet.
 
 ## Future Path
 
-- Add descriptor registers for source/destination addresses and control.
+- Move descriptor registers into a synthesizable control block.
 - Add a real DMA controller.
-- Add AXI-lite control and an AXI memory master.
+- Add AXI-lite or APB control and an AXI/AHB memory master.
 - Add memory latency, backpressure, and arbitration tests.

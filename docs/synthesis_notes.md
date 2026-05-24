@@ -7,11 +7,14 @@ default `row4` MAC variant. `make synth-serial` and `make synth-full16` run the
 same flow for the other MAC variants. `make synth-apb` synthesizes the optional
 APB wrapper around the default `row4` core.
 
+The descriptor-driven DMA-style flow is a simulation testbench model only. It
+does not add synthesizable descriptor or DMA RTL and has no synthesis target.
+
 The flow reads the SystemVerilog RTL, sets `tinynpu_top` as the top module, runs
 generic synthesis cleanup and optimization passes, writes a synthesized Verilog
 netlist, and emits a simple area-style statistics report.
 
-The v14 flow includes the behavioral A/B int8 scratchpad modules and C int32
+The current flow includes the behavioral A/B int8 scratchpad modules and C int32
 result-buffer module. This is still generic register-based synthesis, not SRAM
 macro mapping.
 
