@@ -1,5 +1,11 @@
 # Changelog
 
+## v12
+
+- Documented the simple register bus protocol.
+- Added bus protocol tests for always-ready behavior, A/B readback, C read-only
+  storage, ignored CTRL bits, and unaligned accesses.
+
 ## v11
 
 - Added coverage-style scenario reporting from simulation output.

@@ -7,6 +7,9 @@
 - Directed functional cases: identity, all zeros, all ones, mixed signed values
 - Signed arithmetic edge cases: max positive, min negative times positive, alternating extremes, sparse single nonzero
 - Control/status behavior: start while busy, sticky done, clear done, new start after done
+- Simple bus protocol behavior: always-ready response, A/B readback,
+  C read-only storage, ignored CTRL bits, invalid access handling, and unaligned
+  access handling
 - Reset behavior, including reset during an active operation
 - Invalid bus behavior: unmapped reads return zero and unmapped writes are ignored
 - Deterministic random golden-model tests generated from a seed

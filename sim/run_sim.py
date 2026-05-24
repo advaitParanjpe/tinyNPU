@@ -36,7 +36,14 @@ CONTROL_STATUS_TESTS = {
     "reset_mid_operation": ("reset_mid_operation",),
 }
 
-BUS_TESTS = ("invalid_bus_access",)
+BUS_TESTS = (
+    "invalid_bus_access",
+    "bus_ready_always_high",
+    "read_back_a_b_storage",
+    "c_read_only",
+    "ctrl_write_ignored_bits",
+    "unaligned_address_behavior",
+)
 
 ASSERTION_CHECKS = (
     "busy_done_mutex",

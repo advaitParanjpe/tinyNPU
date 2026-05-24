@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v11 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v12 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -9,7 +9,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Simple always-ready register bus with CTRL/STATUS and A/B/C storage.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
-- Directed, edge-case, control/status, and deterministic random golden-model verification.
+- Directed, edge-case, bus protocol, control/status, and deterministic random golden-model verification.
 - Lightweight simulation assertions/checkers and bounded-latency checking.
 - Coverage-style scenario reporting for tested functional/control/bus cases.
 - Generic Yosys synthesis for all variants.
@@ -74,18 +74,21 @@ The `full16` variant updates all 16 C accumulators in parallel for each `k`,
 then commits the full C matrix. It is an upper-parallelism baseline for the
 fixed 4x4 design.
 
-There is no AXI, APB, DMA, SRAM macro, or external memory interface in v11.
+There is no AXI, APB, DMA, SRAM macro, or external memory interface in v12.
 
 ## Register Map
 
-All matrix entries are row-major. `bus_ready` is always asserted.
+All matrix entries are row-major. `bus_ready` is always asserted. A transaction
+occurs on a rising clock edge when `bus_valid && bus_ready`. Read data is a
+registered response: `bus_rdata` updates after the accepted read edge and remains
+stable until another read or reset.
 
 | Address | Name | Description |
 | --- | --- | --- |
 | `0x00` | `CTRL` | bit 0: write `1` to start when not busy; bit 1: write `1` to clear sticky done |
 | `0x04` | `STATUS` | bit 0: busy; bit 1: done |
-| `0x10`-`0x4c` | `A[0]`-`A[15]` | one signed int8 per 32-bit word, stored in bits `[7:0]` |
-| `0x50`-`0x8c` | `B[0]`-`B[15]` | one signed int8 per 32-bit word, stored in bits `[7:0]` |
+| `0x10`-`0x4c` | `A[0]`-`A[15]` | one signed int8 per 32-bit word, stored in bits `[7:0]`; reads are sign-extended |
+| `0x50`-`0x8c` | `B[0]`-`B[15]` | one signed int8 per 32-bit word, stored in bits `[7:0]`; reads are sign-extended |
 | `0x90`-`0xcc` | `C[0]`-`C[15]` | signed int32 result words, read-only from the bus |
 
 `STATUS.done` stays asserted after a completed operation until software writes
@@ -96,9 +99,14 @@ Additional bus/control behavior:
 
 - `CTRL.start` is accepted only when the accelerator is not busy.
 - Writes to `CTRL.start` while busy are ignored and do not restart or corrupt the in-flight operation.
+- Undefined CTRL bits are ignored. Writing `start` and `clear_done` together while idle starts the operation and clears sticky done.
 - Reset clears busy/done/control state and zeroes the internal A/B/C storage.
 - Invalid or unmapped reads return `0`.
 - Invalid or unmapped writes are ignored.
+- Unaligned reads return `0`.
+- Unaligned writes are ignored.
+
+See `docs/bus_protocol.md` for the full simple bus contract.
 
 ## Random Vectors
 
@@ -131,6 +139,7 @@ The current self-checking Icarus simulation covers:
 - directed functional tests: identity, zeros, ones, mixed signed values
 - signed arithmetic edge cases: `127`, `-128`, alternating extremes, sparse nonzero
 - control/status behavior: start while busy, sticky done, clear done, new start after done
+- bus protocol behavior: always-ready signaling, A/B readback, C read-only storage, ignored CTRL bits, unaligned access handling
 - reset mid-operation recovery
 - invalid bus read/write behavior
 - 50 deterministic random golden-model tests by default
@@ -196,3 +205,4 @@ Human-readable notes live in:
 - `docs/results.md`
 - `docs/architecture_variants.md`
 - `docs/coverage.md`
+- `docs/bus_protocol.md`

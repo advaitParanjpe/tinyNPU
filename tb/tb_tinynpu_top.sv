@@ -724,6 +724,245 @@ module tb_tinynpu_top;
     end
   endtask
 
+  task automatic run_bus_ready_always_high_test;
+    logic [DATA_W*MATRIX_ELEMS-1:0] a_values;
+    logic [DATA_W*MATRIX_ELEMS-1:0] b_values;
+    logic [C_FLAT_W-1:0] expected;
+    int local_failures;
+    begin
+      local_failures = 0;
+
+      @(negedge clk);
+      rst_n <= 1'b0;
+      bus_valid <= 1'b0;
+      bus_we <= 1'b0;
+      bus_addr <= '0;
+      bus_wdata <= '0;
+      @(posedge clk);
+      #1;
+      if (bus_ready !== 1'b1) begin
+        $display("FAIL bus_ready_always_high: bus_ready not high during reset");
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+      @(negedge clk);
+      rst_n <= 1'b1;
+      repeat (2) @(posedge clk);
+      #1;
+      if (bus_ready !== 1'b1) begin
+        $display("FAIL bus_ready_always_high: bus_ready not high during idle");
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+
+      build_identity(a_values, b_values, expected);
+      active_a_values = a_values;
+      active_b_values = b_values;
+      write_matrix_a(a_values);
+      write_matrix_b(b_values);
+      start_accel();
+      wait_busy();
+      #1;
+      if (bus_ready !== 1'b1) begin
+        $display("FAIL bus_ready_always_high: bus_ready not high during busy");
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+      wait_done();
+      #1;
+      if (bus_ready !== 1'b1) begin
+        $display("FAIL bus_ready_always_high: bus_ready not high during done");
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+      clear_done();
+      #1;
+      if (bus_ready !== 1'b1) begin
+        $display("FAIL bus_ready_always_high: bus_ready not high after clear_done");
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+
+      if (local_failures == 0) begin
+        directed_tests_passed = directed_tests_passed + 1;
+        $display("PASS bus_ready_always_high");
+      end
+    end
+  endtask
+
+  task automatic run_read_back_a_b_storage_test;
+    logic [31:0] data;
+    int local_failures;
+    int i;
+    int signed value;
+    int signed got;
+    begin
+      local_failures = 0;
+
+      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
+        value = (i * 17) - 128;
+        bus_write(ADDR_A_BASE + (i * 4), pack_i8(value));
+        bus_write(ADDR_B_BASE + (i * 4), pack_i8(127 - (i * 13)));
+      end
+
+      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
+        value = (i * 17) - 128;
+        bus_read(ADDR_A_BASE + (i * 4), data);
+        got = $signed(data);
+        if (got !== value) begin
+          $display("FAIL read_back_a_b_storage: A[%0d] expected sign-extended %0d actual %0d data=0x%08x", i, value, got, data);
+          failures = failures + 1;
+          local_failures = local_failures + 1;
+        end
+
+        value = 127 - (i * 13);
+        bus_read(ADDR_B_BASE + (i * 4), data);
+        got = $signed(data);
+        if (got !== value) begin
+          $display("FAIL read_back_a_b_storage: B[%0d] expected sign-extended %0d actual %0d data=0x%08x", i, value, got, data);
+          failures = failures + 1;
+          local_failures = local_failures + 1;
+        end
+      end
+
+      if (local_failures == 0) begin
+        directed_tests_passed = directed_tests_passed + 1;
+        $display("PASS read_back_a_b_storage");
+      end
+    end
+  endtask
+
+  task automatic run_c_read_only_test;
+    logic [DATA_W*MATRIX_ELEMS-1:0] a_values;
+    logic [DATA_W*MATRIX_ELEMS-1:0] b_values;
+    logic [C_FLAT_W-1:0] expected;
+    logic [31:0] before_data;
+    logic [31:0] after_data;
+    int local_failures;
+    int i;
+    begin
+      local_failures = 0;
+      build_identity(a_values, b_values, expected);
+      active_a_values = a_values;
+      active_b_values = b_values;
+      write_matrix_a(a_values);
+      write_matrix_b(b_values);
+      start_accel();
+      wait_done();
+
+      for (i = 0; i < MATRIX_ELEMS; i = i + 1) begin
+        bus_read(ADDR_C_BASE + (i * 4), before_data);
+        bus_write(ADDR_C_BASE + (i * 4), 32'hffff_ffff);
+        bus_read(ADDR_C_BASE + (i * 4), after_data);
+        if (after_data !== before_data) begin
+          $display("FAIL c_read_only: C[%0d] changed after bus write, before=0x%08x after=0x%08x", i, before_data, after_data);
+          failures = failures + 1;
+          local_failures = local_failures + 1;
+        end
+      end
+
+      clear_done();
+      if (local_failures == 0) begin
+        directed_tests_passed = directed_tests_passed + 1;
+        if (last_latency_cycles >= 0) begin
+          $display("PASS c_read_only latency=%0d cycles", last_latency_cycles);
+        end else begin
+          $display("PASS c_read_only");
+        end
+      end
+    end
+  endtask
+
+  task automatic run_ctrl_write_ignored_bits_test;
+    logic [DATA_W*MATRIX_ELEMS-1:0] a_values;
+    logic [DATA_W*MATRIX_ELEMS-1:0] b_values;
+    logic [C_FLAT_W-1:0] expected;
+    logic [31:0] status;
+    int local_failures;
+    begin
+      local_failures = 0;
+      build_identity(a_values, b_values, expected);
+      active_a_values = a_values;
+      active_b_values = b_values;
+      write_matrix_a(a_values);
+      write_matrix_b(b_values);
+
+      bus_write(ADDR_CTRL, 32'hffff_ffff);
+      bus_read(ADDR_STATUS, status);
+      if (status[1] !== 1'b0) begin
+        $display("FAIL ctrl_write_ignored_bits: done not cleared by CTRL high-bit write, status=0x%08x", status);
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+      wait_done();
+      read_and_check_c("ctrl_write_ignored_bits", expected);
+      clear_done();
+    end
+  endtask
+
+  task automatic run_unaligned_address_behavior_test;
+    logic [31:0] data;
+    logic [31:0] status;
+    int local_failures;
+    begin
+      local_failures = 0;
+
+      bus_write(ADDR_A_BASE, pack_i8(-5));
+      bus_write(ADDR_B_BASE, pack_i8(77));
+      bus_write(ADDR_A_BASE + 8'h01, pack_i8(99));
+      bus_write(ADDR_B_BASE + 8'h02, pack_i8(-99));
+      bus_write(ADDR_C_BASE + 8'h01, 32'h1234_5678);
+      bus_write(ADDR_CTRL + 8'h01, 32'hffff_ffff);
+
+      bus_read(ADDR_A_BASE + 8'h01, data);
+      if (data !== 32'h0) begin
+        $display("FAIL unaligned_address_behavior: unaligned A read returned 0x%08x expected 0", data);
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+
+      bus_read(ADDR_B_BASE + 8'h02, data);
+      if (data !== 32'h0) begin
+        $display("FAIL unaligned_address_behavior: unaligned B read returned 0x%08x expected 0", data);
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+
+      bus_read(ADDR_C_BASE + 8'h01, data);
+      if (data !== 32'h0) begin
+        $display("FAIL unaligned_address_behavior: unaligned C read returned 0x%08x expected 0", data);
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+
+      bus_read(ADDR_A_BASE, data);
+      if ($signed(data) !== -5) begin
+        $display("FAIL unaligned_address_behavior: aligned A changed after unaligned write, data=0x%08x", data);
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+
+      bus_read(ADDR_B_BASE, data);
+      if ($signed(data) !== 77) begin
+        $display("FAIL unaligned_address_behavior: aligned B changed after unaligned write, data=0x%08x", data);
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+
+      bus_read(ADDR_STATUS, status);
+      if (status[0] !== 1'b0 || status[1] !== 1'b0) begin
+        $display("FAIL unaligned_address_behavior: unaligned CTRL write affected status=0x%08x", status);
+        failures = failures + 1;
+        local_failures = local_failures + 1;
+      end
+
+      if (local_failures == 0) begin
+        directed_tests_passed = directed_tests_passed + 1;
+        $display("PASS unaligned_address_behavior");
+      end
+    end
+  endtask
+
   task automatic run_generated_tests;
     logic [DATA_W*MATRIX_ELEMS-1:0] a_values;
     logic [DATA_W*MATRIX_ELEMS-1:0] b_values;
@@ -778,6 +1017,11 @@ module tb_tinynpu_top;
     run_new_start_after_done_test();
     run_reset_mid_operation_test();
     run_invalid_bus_access_test();
+    run_bus_ready_always_high_test();
+    run_read_back_a_b_storage_test();
+    run_c_read_only_test();
+    run_ctrl_write_ignored_bits_test();
+    run_unaligned_address_behavior_test();
     run_generated_tests();
 
     if (failures == 0) begin

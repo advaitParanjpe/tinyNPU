@@ -35,7 +35,8 @@ path, number of passed coverage categories, and known gap count.
   alternating extremes, sparse single nonzero.
 - Control/status scenarios: back-to-back operations, start while busy, sticky
   done and clear, new start after done, reset mid-operation.
-- Bus behavior: invalid reads return zero and invalid writes are ignored.
+- Bus behavior: invalid accesses, always-ready signaling, A/B readback, C
+  read-only storage, ignored CTRL bits, and unaligned address handling.
 - Random testing: deterministic golden-model vectors, 50 tests by default.
 - Checker suite: busy/done mutex, start ignored while busy, bounded done after
   start, reset clears status, C stable while done is sticky.
