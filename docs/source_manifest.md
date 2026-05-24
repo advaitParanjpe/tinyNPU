@@ -13,6 +13,8 @@
 - `rtl/tinynpu_apb_wrapper.sv`: APB-lite-style wrapper around the core.
 - `rtl/tinynpu_dma_descriptor_wrapper.sv`: APB-lite-style descriptor wrapper
   with DMA FSM, abstract external memory port, and APB core wrapper.
+- `rtl/tinynpu_axi_lite_wrapper.sv`: AXI4-Lite control wrapper around the DMA
+  descriptor wrapper; memory port remains the abstract ready/valid interface.
 
 ## Simulation-Only RTL/Checkers
 
@@ -29,6 +31,7 @@
   model.
 - `tb/tb_tinynpu_dma_descriptor_wrapper.sv`: synthesizable descriptor-wrapper
   regression.
+- `tb/tb_tinynpu_axi_lite_wrapper.sv`: AXI4-Lite control-wrapper regression.
 
 ## Models And Simulation Runners
 
@@ -38,6 +41,7 @@
 - `sim/run_apb_dma_sim.py`: DMA-style testbench model runner.
 - `sim/run_dma_descriptor_wrapper_sim.py`: DMA descriptor-wrapper simulation
   runner.
+- `sim/run_axi_lite_sim.py`: AXI4-Lite control-wrapper simulation runner.
 
 ## Scripts
 

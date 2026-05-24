@@ -101,7 +101,34 @@ Targets:
 - Test: `make sim-dma-desc`
 - Synthesize: `make synth-dma-desc`
 
-## Layer 4: DMA-Style Simulation Model
+## Layer 4: AXI4-Lite Control Wrapper
+
+File:
+
+- `rtl/tinynpu_axi_lite_wrapper.sv`
+
+Purpose:
+
+Optional AXI4-Lite slave adapter around `tinynpu_dma_descriptor_wrapper`. It
+translates single-beat AXI4-Lite control reads and writes into the descriptor
+wrapper's APB-style register interface. The abstract external memory port passes
+through unchanged.
+
+This is a control-plane wrapper only. It has no full AXI memory master, no
+bursts, no IDs, and no multiple outstanding transactions. It returns OKAY
+responses and accepts only full-word writes with `WSTRB == 4'b1111`; partial
+writes are ignored.
+
+Status: synthesizable.
+
+Targets:
+
+- Test: `make sim-axi-lite`
+- Synthesize: `make synth-axi-lite`
+
+See `docs/axi_lite_wrapper.md`.
+
+## Layer 5: DMA-Style Simulation Model
 
 File:
 
@@ -126,7 +153,7 @@ Targets:
 
 ## Not Implemented Yet
 
-- AXI/AHB memory master.
+- Full AXI/AHB memory master.
 - Burst transfers.
 - Byte strobes, memory error handling, and descriptor interrupts.
 - Interrupt output.

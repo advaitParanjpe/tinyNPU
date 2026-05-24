@@ -21,6 +21,10 @@
 - DMA memory-port behavior: always-ready, fixed-latency, and deterministic
   random-backpressure operation, plus request stability while stalled
 - DMA descriptor-wrapper performance reporting by memory mode and FSM phase
+- AXI4-Lite control-wrapper behavior: descriptor register programming, forwarded
+  core identity, descriptor-programmed DMA identity/mixed-signed operation,
+  AXI-Lite channel stalls, invalid/unaligned access, and full-word-only WSTRB
+  handling
 - Descriptor-driven DMA-style APB system-flow behavior: descriptor programming,
   external-memory load of A/B, accelerator start, STATUS.done polling,
   C store-back, back-to-back operations, start while descriptor model is busy,
@@ -56,7 +60,7 @@
 
 - Functional coverage metrics
 - Full APB protocol coverage
-- AXI/AHB DMA data-mover behavior
+- Full AXI/AHB DMA data-mover behavior
 - Longer memory-port backpressure seed sweeps
 - Randomized bus timing with backpressure, since `bus_ready` is currently always high
 - Larger matrix sizes or configurable dimensions

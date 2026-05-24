@@ -21,8 +21,10 @@ regressions when touching integration logic:
 make sim-apb
 make sim-apb-dma
 make sim-dma-desc
+make sim-axi-lite
 make synth-apb
 make synth-dma-desc
+make synth-axi-lite
 ```
 
 `make sim-dma-desc` also writes DMA performance data to
@@ -49,8 +51,8 @@ make precommit
 ```
 
 This runs `make check`, `make golden`, `make compare`, `make sim-apb`,
-`make sim-apb-dma`, `make sim-dma-desc`, `make synth-apb`, and
-`make synth-dma-desc`.
+`make sim-apb-dma`, `make sim-dma-desc`, `make sim-axi-lite`,
+`make synth-apb`, `make synth-dma-desc`, and `make synth-axi-lite`.
 
 ## Tools
 

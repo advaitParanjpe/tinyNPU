@@ -11,6 +11,12 @@ APB wrapper around the default `row4` core.
 APB core wrapper. This includes synthesizable descriptor registers, a DMA FSM,
 and a simple abstract external memory port. It is not AXI and has no burst or
 outstanding transaction support.
+
+`make synth-axi-lite` synthesizes the optional AXI4-Lite control wrapper around
+the DMA descriptor wrapper. This adds AXI-Lite control-plane handshaking only;
+the external memory interface remains the same abstract ready/valid port and is
+not a full AXI memory master.
+
 v22 added memory-port backpressure verification without changing this RTL. v23
 adds `tinynpu_mem_port_assertions` for simulation only; it is not read by the
 Yosys synthesis scripts.
@@ -30,6 +36,7 @@ Variant-specific outputs are written under `build/synth/<variant>/`:
 - `tinynpu_top_synth.v`
 - `tinynpu_apb_wrapper_synth.v` for `build/synth/apb/`
 - `tinynpu_dma_descriptor_wrapper_synth.v` for `build/synth/dma_desc/`
+- `tinynpu_axi_lite_wrapper_synth.v` for `build/synth/axi_lite/`
 - `synth_summary.json`
 
 ## Current Limitations
@@ -38,7 +45,7 @@ Variant-specific outputs are written under `build/synth/<variant>/`:
 - No real standard-cell library mapping yet
 - No timing constraints yet
 - No clock uncertainty or IO delay modeling
-- No AXI/AHB memory bus master yet
+- No full AXI/AHB memory bus master yet
 - No bursts, byte strobes, outstanding transactions, or memory error responses
 - No OpenROAD floorplan, placement, routing, or parasitics
 - No technology-specific area, power, or timing claims

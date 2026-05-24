@@ -1,5 +1,18 @@
 # Changelog
 
+## v25
+
+- Added optional `tinynpu_axi_lite_wrapper` for AXI4-Lite control-plane access
+  to the existing DMA descriptor wrapper.
+- Added AXI-Lite simulation covering descriptor register read/write, forwarded
+  core access, DMA launch/polling, channel stalls, invalid/unaligned access,
+  and full-word-only `WSTRB` behavior.
+- Added `make sim-axi-lite` and `make synth-axi-lite`.
+- Kept `tinynpu_top`, `tinynpu_apb_wrapper`, MAC variants, APB support, and the
+  abstract DMA memory port unchanged.
+- Kept full AXI memory master, bursts, IDs, and multiple outstanding
+  transactions out of scope.
+
 ## v24
 
 - Added DMA descriptor-wrapper performance measurement in simulation.

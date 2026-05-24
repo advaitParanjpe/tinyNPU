@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v24 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v25 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -9,6 +9,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Simple always-ready register bus with CTRL/STATUS, A/B scratchpads, and C result storage.
 - Optional APB-lite-style wrapper around the existing simple-bus core.
 - Optional synthesizable DMA descriptor wrapper with a DMA-control FSM and abstract external memory port.
+- Optional AXI4-Lite control wrapper around the DMA descriptor wrapper.
 - DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
 - Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
@@ -39,9 +40,11 @@ make sim
 make sim-apb
 make sim-apb-dma
 make sim-dma-desc
+make sim-axi-lite
 make synth
 make synth-apb
 make synth-dma-desc
+make synth-axi-lite
 make results
 make sim-serial
 make synth-serial
@@ -91,16 +94,23 @@ fixed 4x4 design.
 The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
-There is no AXI, SRAM macro, burst engine, or outstanding memory transaction
-support in v24. APB is available as an optional wrapper around the existing
-simple-bus core. A second optional wrapper adds synthesizable descriptor
-registers at `0x100`-`0x11f`, while forwarding `0x000`-`0x0ff` to the APB core
-wrapper. Its DMA-control FSM runs
+There is no full AXI memory master, SRAM macro, burst engine, or outstanding
+memory transaction support in v25. APB is available as an optional wrapper
+around the existing simple-bus core. A second optional wrapper adds
+synthesizable descriptor registers at `0x100`-`0x11f`, while forwarding
+`0x000`-`0x0ff` to the APB core wrapper. Its DMA-control FSM runs
 `LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C` and moves matrix data
 over a simple single-beat ready/valid memory port. This memory port is an
 abstract integration step, not AXI. `mem_valid` remains asserted until
 `mem_ready`, and `mem_addr`, `mem_we`, and write data remain stable while a
 request is stalled.
+
+v25 adds `tinynpu_axi_lite_wrapper`, an optional AXI4-Lite slave for software
+control only. It translates AXI4-Lite register accesses into the descriptor
+wrapper's APB-style interface and passes the abstract memory port through
+unchanged. The wrapper supports one outstanding read and one outstanding write,
+returns OKAY responses, has no bursts or IDs, and ignores partial writes unless
+`WSTRB == 4'b1111`.
 
 ## Design Layers
 
@@ -110,6 +120,7 @@ models:
 - MAC datapaths and `tinynpu_top` are synthesizable accelerator RTL.
 - `tinynpu_apb_wrapper` is a synthesizable APB-lite-style adapter.
 - `tinynpu_dma_descriptor_wrapper` is a synthesizable descriptor/status wrapper with a DMA-control FSM and abstract memory port.
+- `tinynpu_axi_lite_wrapper` is a synthesizable AXI4-Lite control wrapper around the DMA descriptor wrapper.
 - `tb/tb_tinynpu_apb_dma_model.sv` is a testbench-only DMA-style model.
 
 See `docs/design_layers.md` and `docs/source_manifest.md` for the full layer and
@@ -181,6 +192,7 @@ The current self-checking Icarus simulation covers:
 - bus protocol behavior: always-ready signaling, A/B readback, C read-only storage, ignored CTRL bits, unaligned access handling
 - focused APB wrapper tests for identity, mixed signed, invalid/unaligned access, C read-only behavior, start while busy, and reset
 - synthesizable DMA descriptor-wrapper tests for descriptor read/write, DMA memory movement, core launch, busy core-window blocking, and forwarded core access
+- AXI4-Lite control-wrapper tests for descriptor programming, forwarded core access, DMA launch/polling, channel stalls, invalid/unaligned access, and WSTRB behavior
 - fixed-latency and deterministic random-backpressure tests for the descriptor wrapper memory port
 - reusable memory-port assertions for valid hold, stable stalled requests, and X/Z checks
 - descriptor-wrapper DMA performance reporting for `always_ready`, `fixed_latency`, and `random_backpressure` memory modes
@@ -214,6 +226,7 @@ Run generic Yosys synthesis:
 make synth
 make synth-apb
 make synth-dma-desc
+make synth-axi-lite
 make synth-serial
 make synth-full16
 ```

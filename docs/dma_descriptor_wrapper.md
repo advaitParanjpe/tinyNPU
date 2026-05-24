@@ -9,6 +9,11 @@ uses a simple abstract external memory port to load A/B data, launch the wrapped
 tinyNPU core, and store C results. This is still not AXI and does not support
 bursts or outstanding memory transactions.
 
+v25 adds an optional AXI4-Lite control wrapper above this block. That wrapper
+does not change this module's APB-style register interface or abstract memory
+port; it only translates AXI4-Lite software accesses into descriptor-wrapper
+register transactions. See `docs/axi_lite_wrapper.md`.
+
 ## External Memory Port
 
 The wrapper exposes this single-beat ready/valid memory port:

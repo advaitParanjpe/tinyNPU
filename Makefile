@@ -1,4 +1,4 @@
-.PHONY: all help check precommit sim sim-apb sim-apb-dma sim-dma-desc sim-serial sim-full16 golden vectors synth synth-apb synth-dma-desc synth-serial synth-full16 results results-serial results-full16 compare clean
+.PHONY: all help check precommit sim sim-apb sim-apb-dma sim-dma-desc sim-axi-lite sim-serial sim-full16 golden vectors synth synth-apb synth-dma-desc synth-axi-lite synth-serial synth-full16 results results-serial results-full16 compare clean
 
 all: vectors golden sim synth results
 
@@ -10,9 +10,11 @@ help:
 	@echo "  make sim-apb        Run APB wrapper simulation"
 	@echo "  make sim-apb-dma    Run testbench-only DMA-style APB model simulation"
 	@echo "  make sim-dma-desc   Run synthesizable DMA descriptor-wrapper simulation"
+	@echo "  make sim-axi-lite   Run AXI4-Lite control-wrapper simulation"
 	@echo "  make synth          Synthesize default row4 core with Yosys"
 	@echo "  make synth-apb      Synthesize APB wrapper with Yosys"
 	@echo "  make synth-dma-desc Synthesize DMA descriptor wrapper with Yosys"
+	@echo "  make synth-axi-lite Synthesize AXI4-Lite control wrapper with Yosys"
 	@echo "  make compare        Run sim/synth/results for row4, serial, and full16"
 	@echo "  make precommit      Run commit-readiness regression"
 	@echo "  make clean          Remove build artifacts"
@@ -20,7 +22,7 @@ help:
 check:
 	python3 scripts/check_repo.py
 
-precommit: check golden compare sim-apb sim-apb-dma sim-dma-desc synth-apb synth-dma-desc
+precommit: check golden compare sim-apb sim-apb-dma sim-dma-desc sim-axi-lite synth-apb synth-dma-desc synth-axi-lite
 
 sim:
 	python3 sim/run_sim.py --mac-variant row4
@@ -33,6 +35,9 @@ sim-apb-dma:
 
 sim-dma-desc:
 	python3 sim/run_dma_descriptor_wrapper_sim.py
+
+sim-axi-lite:
+	python3 sim/run_axi_lite_sim.py
 
 sim-serial:
 	python3 sim/run_sim.py --mac-variant serial
@@ -54,6 +59,9 @@ synth-apb:
 
 synth-dma-desc:
 	scripts/synth_yosys.sh dma_desc
+
+synth-axi-lite:
+	scripts/synth_yosys.sh axi_lite
 
 synth-serial:
 	scripts/synth_yosys.sh serial
