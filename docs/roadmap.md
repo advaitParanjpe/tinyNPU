@@ -8,6 +8,7 @@
 - APB-lite-style wrapper around the core.
 - Synthesizable DMA descriptor wrapper with DMA FSM and abstract memory port.
 - Fixed-latency and deterministic backpressure tests for the abstract memory port.
+- Reusable simulation-only checker for the abstract memory port.
 - Testbench-only DMA-style external-memory movement model.
 - Directed, edge, bus, APB, descriptor, random, and checker-based simulation.
 - Generic Yosys synthesis and structured result summaries.

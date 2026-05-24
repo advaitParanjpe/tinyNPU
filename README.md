@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v23 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v24 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -17,6 +17,7 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Coverage-style scenario reporting for tested functional/control/bus cases.
 - DMA memory-port fixed-latency and deterministic backpressure testing.
 - Reusable simulation-only memory-port assertions for the abstract DMA memory port.
+- DMA descriptor-wrapper performance reporting by memory mode and FSM phase.
 - Generic Yosys synthesis for all variants.
 - Lightweight repository checks for commit readiness.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
@@ -91,7 +92,7 @@ The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
 There is no AXI, SRAM macro, burst engine, or outstanding memory transaction
-support in v22. APB is available as an optional wrapper around the existing
+support in v24. APB is available as an optional wrapper around the existing
 simple-bus core. A second optional wrapper adds synthesizable descriptor
 registers at `0x100`-`0x11f`, while forwarding `0x000`-`0x0ff` to the APB core
 wrapper. Its DMA-control FSM runs
@@ -182,6 +183,7 @@ The current self-checking Icarus simulation covers:
 - synthesizable DMA descriptor-wrapper tests for descriptor read/write, DMA memory movement, core launch, busy core-window blocking, and forwarded core access
 - fixed-latency and deterministic random-backpressure tests for the descriptor wrapper memory port
 - reusable memory-port assertions for valid hold, stable stalled requests, and X/Z checks
+- descriptor-wrapper DMA performance reporting for `always_ready`, `fixed_latency`, and `random_backpressure` memory modes
 - descriptor-driven DMA-style APB system-flow tests for external-memory load, compute, poll, and store-back behavior
 - reset mid-operation recovery
 - invalid bus read/write behavior
@@ -189,6 +191,7 @@ The current self-checking Icarus simulation covers:
 - lightweight checkers compiled with `-DTINYNPU_SIM_ASSERT`
 - bounded operation latency with `MAX_OPERATION_CYCLES = 200`
 - coverage-style scenario summaries emitted by `sim/run_sim.py`
+- descriptor-wrapper performance summaries emitted by `sim/run_dma_descriptor_wrapper_sim.py`
 
 `make sim` enables the checkers by default. The default `row4` regression
 currently observes a 26-cycle accepted-start-to-done latency. The `serial`
@@ -277,6 +280,7 @@ Human-readable notes live in:
 - `docs/roadmap.md`
 - `docs/architecture_variants.md`
 - `docs/coverage.md`
+- `docs/performance.md`
 - `docs/bus_protocol.md`
 - `docs/development.md`
 - `docs/memory_architecture.md`

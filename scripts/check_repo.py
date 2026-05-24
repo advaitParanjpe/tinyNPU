@@ -33,6 +33,7 @@ REQUIRED_FILES = (
     "docs/source_manifest.md",
     "docs/dma_model.md",
     "docs/dma_descriptor_wrapper.md",
+    "docs/performance.md",
     "docs/results.md",
 )
 

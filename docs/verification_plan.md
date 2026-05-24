@@ -20,6 +20,7 @@
   identity/invalid access behavior
 - DMA memory-port behavior: always-ready, fixed-latency, and deterministic
   random-backpressure operation, plus request stability while stalled
+- DMA descriptor-wrapper performance reporting by memory mode and FSM phase
 - Descriptor-driven DMA-style APB system-flow behavior: descriptor programming,
   external-memory load of A/B, accelerator start, STATUS.done polling,
   C store-back, back-to-back operations, start while descriptor model is busy,

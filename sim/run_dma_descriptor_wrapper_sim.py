@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -11,6 +12,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = REPO_ROOT / "build" / "sim" / "dma_desc_wrapper"
 SUMMARY_PATH = BUILD_DIR / "sim_summary.json"
+PERF_SUMMARY_PATH = BUILD_DIR / "perf_summary.json"
+
+PERF_RE = re.compile(
+    r"^PERF mode=(?P<mode>\S+) test=(?P<test>\S+) total=(?P<total>\d+) "
+    r"load_a=(?P<load_a>\d+) load_b=(?P<load_b>\d+) "
+    r"start_core=(?P<start_core>\d+) wait_core=(?P<wait_core>\d+) "
+    r"store_c=(?P<store_c>\d+)$"
+)
+
+MEMORY_MODES = ("always_ready", "fixed_latency", "random_backpressure")
 
 TEST_NAMES = (
     "desc_regs_read_write",
@@ -49,7 +60,7 @@ def run(cmd, capture=False):
     return subprocess.run(cmd, cwd=REPO_ROOT)
 
 
-def write_summary(status, tests_passed=0, passed_names=None, sim_stdout="", notes=None):
+def write_summary(status, tests_passed=0, passed_names=None, sim_stdout="", perf_summary=None, notes=None):
     summary = {
         "status": status,
         "top": "tinynpu_dma_descriptor_wrapper",
@@ -80,6 +91,8 @@ def write_summary(status, tests_passed=0, passed_names=None, sim_stdout="", note
         "protocol_stability_checked": "desc_dma_mem_protocol_stability" in (passed_names or []),
         "stalled_transactions_observed": "desc_dma_mem_protocol_stability" in (passed_names or []),
         "mem_port_assertions_enabled": "Memory-port assertions: enabled" in sim_stdout,
+        "performance_reporting_enabled": perf_summary is not None,
+        "perf_summary_path": str(PERF_SUMMARY_PATH.relative_to(REPO_ROOT)) if perf_summary is not None else None,
         "tests_passed": tests_passed,
         "test_names": list(passed_names or []),
         "notes": notes or "Uses simple abstract ready/valid memory port; not AXI",
@@ -88,6 +101,80 @@ def write_summary(status, tests_passed=0, passed_names=None, sim_stdout="", note
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     SUMMARY_PATH.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return summary
+
+
+def parse_perf(stdout):
+    entries = []
+    for line in stdout.splitlines():
+        match = PERF_RE.match(line.strip())
+        if not match:
+            continue
+        entry = {
+            "mode": match.group("mode"),
+            "test": match.group("test"),
+            "total_cycles": int(match.group("total")),
+            "load_a_cycles": int(match.group("load_a")),
+            "load_b_cycles": int(match.group("load_b")),
+            "start_core_cycles": int(match.group("start_core")),
+            "wait_core_cycles": int(match.group("wait_core")),
+            "store_c_cycles": int(match.group("store_c")),
+        }
+        entries.append(entry)
+    return entries
+
+
+def avg(values):
+    return sum(values) / len(values) if values else 0.0
+
+
+def build_perf_summary(status, perf_entries):
+    by_mode = {}
+    for mode in MEMORY_MODES:
+        mode_entries = [entry for entry in perf_entries if entry["mode"] == mode]
+        if mode_entries:
+            totals = [entry["total_cycles"] for entry in mode_entries]
+            by_mode[mode] = {
+                "tests_counted": len(mode_entries),
+                "min_total_cycles": min(totals),
+                "max_total_cycles": max(totals),
+                "avg_total_cycles": avg(totals),
+                "avg_load_a_cycles": avg([entry["load_a_cycles"] for entry in mode_entries]),
+                "avg_load_b_cycles": avg([entry["load_b_cycles"] for entry in mode_entries]),
+                "avg_start_core_cycles": avg([entry["start_core_cycles"] for entry in mode_entries]),
+                "avg_wait_core_cycles": avg([entry["wait_core_cycles"] for entry in mode_entries]),
+                "avg_store_c_cycles": avg([entry["store_c_cycles"] for entry in mode_entries]),
+            }
+        else:
+            by_mode[mode] = {
+                "tests_counted": 0,
+                "min_total_cycles": None,
+                "max_total_cycles": None,
+                "avg_total_cycles": None,
+                "avg_load_a_cycles": None,
+                "avg_load_b_cycles": None,
+                "avg_start_core_cycles": None,
+                "avg_wait_core_cycles": None,
+                "avg_store_c_cycles": None,
+            }
+
+    return {
+        "status": status,
+        "mac_variant": "row4",
+        "memory_modes_tested": list(MEMORY_MODES),
+        "modes": by_mode,
+        "raw_measurements": perf_entries,
+        "notes": [
+            "abstract ready/valid memory port",
+            "not AXI",
+            "cycle counts are simulation measurements",
+        ],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def write_perf_summary(perf_summary):
+    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+    PERF_SUMMARY_PATH.write_text(json.dumps(perf_summary, indent=2) + "\n", encoding="utf-8")
 
 
 def parse_passed_tests(stdout):
@@ -154,7 +241,11 @@ def main():
 
     passed_names = parse_passed_tests(sim_result.stdout)
     status = "passed" if sim_result.returncode == 0 and len(passed_names) == len(TEST_NAMES) else "failed"
-    write_summary(status, len(passed_names), passed_names, sim_stdout=sim_result.stdout)
+    perf_entries = parse_perf(sim_result.stdout)
+    perf_status = "passed" if status == "passed" and perf_entries else "failed"
+    perf_summary = build_perf_summary(perf_status, perf_entries)
+    write_perf_summary(perf_summary)
+    write_summary(status, len(passed_names), passed_names, sim_stdout=sim_result.stdout, perf_summary=perf_summary)
 
     if status != "passed":
         print(

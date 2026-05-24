@@ -1,5 +1,13 @@
 # Changelog
 
+## v24
+
+- Added DMA descriptor-wrapper performance measurement in simulation.
+- Reported total DMA cycles and per-phase cycles for `LOAD_A`, `LOAD_B`,
+  `START_CORE`, `WAIT_CORE`, and `STORE_C`.
+- Added `build/sim/dma_desc_wrapper/perf_summary.json` generation.
+- Kept RTL, public interfaces, MAC variants, and synthesis results unchanged.
+
 ## v23
 
 - Added reusable simulation-only `tinynpu_mem_port_assertions` for the abstract

@@ -45,6 +45,12 @@ module tb_tinynpu_dma_descriptor_wrapper;
   localparam int EXT_B1_BASE = 128;
   localparam int EXT_C1_BASE = 160;
 
+  localparam logic [2:0] DMA_STATE_LOAD_A     = 3'd1;
+  localparam logic [2:0] DMA_STATE_LOAD_B     = 3'd2;
+  localparam logic [2:0] DMA_STATE_START_CORE = 3'd3;
+  localparam logic [2:0] DMA_STATE_WAIT_CORE  = 3'd4;
+  localparam logic [2:0] DMA_STATE_STORE_C    = 3'd5;
+
   logic [31:0] ext_mem [0:EXT_MEM_WORDS-1];
 
   int failures;
@@ -57,6 +63,15 @@ module tb_tinynpu_dma_descriptor_wrapper;
   logic mem_ready_q;
   logic mem_wait_active;
   logic mem_stall_active_q;
+  int perf_tests [0:2];
+  int perf_total_sum [0:2];
+  int perf_total_min [0:2];
+  int perf_total_max [0:2];
+  int perf_load_a_sum [0:2];
+  int perf_load_b_sum [0:2];
+  int perf_start_core_sum [0:2];
+  int perf_wait_core_sum [0:2];
+  int perf_store_c_sum [0:2];
 
   tinynpu_dma_descriptor_wrapper dut (
     .pclk    (pclk),
@@ -193,6 +208,17 @@ module tb_tinynpu_dma_descriptor_wrapper;
     end
   endfunction
 
+  function automatic string mem_mode_name(input int mode);
+    begin
+      case (mode)
+        MEM_MODE_ALWAYS_READY:        mem_mode_name = "always_ready";
+        MEM_MODE_FIXED_LATENCY:       mem_mode_name = "fixed_latency";
+        MEM_MODE_RANDOM_BACKPRESSURE: mem_mode_name = "random_backpressure";
+        default:                      mem_mode_name = "unknown";
+      endcase
+    end
+  endfunction
+
   function automatic int mixed_a(input int idx);
     begin
       case (idx)
@@ -259,6 +285,103 @@ module tb_tinynpu_dma_descriptor_wrapper;
       mem_transaction_count = 0;
       mem_stall_active_q = 1'b0;
       repeat (2) @(posedge pclk);
+    end
+  endtask
+
+  task automatic record_perf(
+    input string test_name,
+    input int mode,
+    input int total_cycles,
+    input int load_a_cycles,
+    input int load_b_cycles,
+    input int start_core_cycles,
+    input int wait_core_cycles,
+    input int store_c_cycles
+  );
+    begin
+      perf_tests[mode] = perf_tests[mode] + 1;
+      perf_total_sum[mode] = perf_total_sum[mode] + total_cycles;
+      perf_load_a_sum[mode] = perf_load_a_sum[mode] + load_a_cycles;
+      perf_load_b_sum[mode] = perf_load_b_sum[mode] + load_b_cycles;
+      perf_start_core_sum[mode] = perf_start_core_sum[mode] + start_core_cycles;
+      perf_wait_core_sum[mode] = perf_wait_core_sum[mode] + wait_core_cycles;
+      perf_store_c_sum[mode] = perf_store_c_sum[mode] + store_c_cycles;
+      if ((perf_tests[mode] == 1) || (total_cycles < perf_total_min[mode])) begin
+        perf_total_min[mode] = total_cycles;
+      end
+      if (total_cycles > perf_total_max[mode]) begin
+        perf_total_max[mode] = total_cycles;
+      end
+
+      $display("PERF mode=%s test=%s total=%0d load_a=%0d load_b=%0d start_core=%0d wait_core=%0d store_c=%0d",
+               mem_mode_name(mode), test_name, total_cycles, load_a_cycles,
+               load_b_cycles, start_core_cycles, wait_core_cycles, store_c_cycles);
+    end
+  endtask
+
+  task automatic wait_desc_done_perf(input string test_name);
+    int total_cycles;
+    int load_a_cycles;
+    int load_b_cycles;
+    int start_core_cycles;
+    int wait_core_cycles;
+    int store_c_cycles;
+    int timeout;
+    begin
+      total_cycles = 0;
+      load_a_cycles = 0;
+      load_b_cycles = 0;
+      start_core_cycles = 0;
+      wait_core_cycles = 0;
+      store_c_cycles = 0;
+      timeout = 0;
+
+      while ((dut.dma_done !== 1'b1) && (timeout < 2000)) begin
+        @(posedge pclk);
+        #1;
+        timeout = timeout + 1;
+        total_cycles = total_cycles + 1;
+        case (dut.dma_state)
+          DMA_STATE_LOAD_A:     load_a_cycles = load_a_cycles + 1;
+          DMA_STATE_LOAD_B:     load_b_cycles = load_b_cycles + 1;
+          DMA_STATE_START_CORE: start_core_cycles = start_core_cycles + 1;
+          DMA_STATE_WAIT_CORE:  wait_core_cycles = wait_core_cycles + 1;
+          DMA_STATE_STORE_C:    store_c_cycles = store_c_cycles + 1;
+          default: begin
+          end
+        endcase
+      end
+
+      if (dut.dma_done !== 1'b1) begin
+        $display("FAIL wait_desc_done_perf: timed out test=%s", test_name);
+        failures = failures + 1;
+      end else begin
+        record_perf(test_name, mem_model_mode, total_cycles, load_a_cycles,
+                    load_b_cycles, start_core_cycles, wait_core_cycles,
+                    store_c_cycles);
+      end
+    end
+  endtask
+
+  task automatic print_perf_summary;
+    int mode;
+    begin
+      $display("DMA performance summary:");
+      for (mode = 0; mode < 3; mode = mode + 1) begin
+        if (perf_tests[mode] > 0) begin
+          $display("PERF_SUMMARY mode=%s tests=%0d min_total=%0d max_total=%0d avg_total=%0d avg_load_a=%0d avg_load_b=%0d avg_start_core=%0d avg_wait_core=%0d avg_store_c=%0d",
+                   mem_mode_name(mode),
+                   perf_tests[mode],
+                   perf_total_min[mode],
+                   perf_total_max[mode],
+                   perf_total_sum[mode] / perf_tests[mode],
+                   perf_load_a_sum[mode] / perf_tests[mode],
+                   perf_load_b_sum[mode] / perf_tests[mode],
+                   perf_start_core_sum[mode] / perf_tests[mode],
+                   perf_wait_core_sum[mode] / perf_tests[mode],
+                   perf_store_c_sum[mode] / perf_tests[mode]);
+        end
+      end
     end
   endtask
 
@@ -505,7 +628,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
       clear_ext_mem(32'h0);
       fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
       start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_identity");
 
       check_ext_c("desc_dma_identity", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
       local_failures = local_failures + c_failures;
@@ -528,7 +651,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
       clear_ext_mem(32'h0);
       fill_mixed_case(EXT_A0_BASE, EXT_B0_BASE);
       start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_mixed_signed");
 
       check_ext_c("desc_dma_mixed_signed", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
       local_failures = local_failures + c_failures;
@@ -552,14 +675,14 @@ module tb_tinynpu_dma_descriptor_wrapper;
 
       fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
       start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_back_to_back_first");
       check_ext_c("desc_dma_back_to_back_first", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
       local_failures = local_failures + c_failures;
       clear_dma_done();
 
       fill_mixed_case(EXT_A1_BASE, EXT_B1_BASE);
       start_dma(EXT_A1_BASE, EXT_B1_BASE, EXT_C1_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_back_to_back_second");
       check_ext_c("desc_dma_back_to_back_second", EXT_A1_BASE, EXT_B1_BASE, EXT_C1_BASE, c_failures);
       local_failures = local_failures + c_failures;
 
@@ -596,7 +719,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
         local_failures = local_failures + 1;
       end
 
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_core_window_blocked_while_busy");
 
       if (local_failures == 0) begin
         tests_passed = tests_passed + 1;
@@ -617,7 +740,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
       clear_ext_mem(32'h5a5a_a5a5);
       fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
       start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_memory_unchanged");
 
       for (i = 0; i < EXT_MEM_WORDS; i = i + 1) begin
         in_used_region = ((i >= EXT_A0_BASE) && (i < EXT_A0_BASE + MATRIX_ELEMS)) ||
@@ -648,7 +771,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
       clear_ext_mem(32'h0);
       fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
       start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_fixed_latency_identity");
       check_ext_c("desc_dma_fixed_latency_identity", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
       local_failures = local_failures + c_failures;
 
@@ -671,7 +794,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
       clear_ext_mem(32'h0);
       fill_mixed_case(EXT_A0_BASE, EXT_B0_BASE);
       start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_fixed_latency_mixed_signed");
       check_ext_c("desc_dma_fixed_latency_mixed_signed", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
       local_failures = local_failures + c_failures;
 
@@ -694,7 +817,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
       clear_ext_mem(32'h0);
       fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
       start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_random_backpressure_identity");
       check_ext_c("desc_dma_random_backpressure_identity", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
       local_failures = local_failures + c_failures;
 
@@ -718,14 +841,14 @@ module tb_tinynpu_dma_descriptor_wrapper;
 
       fill_identity_case(EXT_A0_BASE, EXT_B0_BASE);
       start_dma(EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_random_backpressure_back_to_back_first");
       check_ext_c("desc_dma_random_backpressure_back_to_back_first", EXT_A0_BASE, EXT_B0_BASE, EXT_C0_BASE, c_failures);
       local_failures = local_failures + c_failures;
       clear_dma_done();
 
       fill_mixed_case(EXT_A1_BASE, EXT_B1_BASE);
       start_dma(EXT_A1_BASE, EXT_B1_BASE, EXT_C1_BASE);
-      wait_desc_done();
+      wait_desc_done_perf("desc_dma_random_backpressure_back_to_back_second");
       check_ext_c("desc_dma_random_backpressure_back_to_back_second", EXT_A1_BASE, EXT_B1_BASE, EXT_C1_BASE, c_failures);
       local_failures = local_failures + c_failures;
 
@@ -881,6 +1004,17 @@ module tb_tinynpu_dma_descriptor_wrapper;
     mem_wait_active = 1'b0;
     mem_ready_q = 1'b0;
     mem_stall_active_q = 1'b0;
+    for (int mode = 0; mode < 3; mode = mode + 1) begin
+      perf_tests[mode] = 0;
+      perf_total_sum[mode] = 0;
+      perf_total_min[mode] = 0;
+      perf_total_max[mode] = 0;
+      perf_load_a_sum[mode] = 0;
+      perf_load_b_sum[mode] = 0;
+      perf_start_core_sum[mode] = 0;
+      perf_wait_core_sum[mode] = 0;
+      perf_store_c_sum[mode] = 0;
+    end
 
 `ifdef TINYNPU_SIM_ASSERT
     $display("Memory-port assertions: enabled");
@@ -918,6 +1052,7 @@ module tb_tinynpu_dma_descriptor_wrapper;
     run_desc_dma_random_backpressure_back_to_back();
     run_desc_dma_mem_protocol_stability();
 
+    print_perf_summary();
     $display("DMA descriptor-wrapper tests passed: %0d", tests_passed);
     if (failures == 0) begin
       $display("tinyNPU DMA descriptor-wrapper SIM PASS");

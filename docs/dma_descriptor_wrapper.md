@@ -112,6 +112,15 @@ compiled under `TINYNPU_SIM_ASSERT` for this regression. It fails simulation if
 `mem_valid` drops during a stall, if address/direction/write data change while
 stalled, or if request signals contain X/Z values when active.
 
+## Performance Reporting
+
+`make sim-dma-desc` also emits DMA performance measurements by memory mode and
+FSM phase. The runner writes `build/sim/dma_desc_wrapper/perf_summary.json` with
+total cycles and average `LOAD_A`, `LOAD_B`, `START_CORE`, `WAIT_CORE`, and
+`STORE_C` cycles for `always_ready`, `fixed_latency`, and
+`random_backpressure`. These are simulation measurements over the abstract
+memory port, not AXI timing.
+
 ## Future Path
 
 - Replace the abstract memory port with a real SoC memory bus master.

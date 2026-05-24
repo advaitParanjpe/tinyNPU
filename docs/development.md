@@ -25,6 +25,9 @@ make synth-apb
 make synth-dma-desc
 ```
 
+`make sim-dma-desc` also writes DMA performance data to
+`build/sim/dma_desc_wrapper/perf_summary.json`.
+
 Run the full variant comparison before commit:
 
 ```sh

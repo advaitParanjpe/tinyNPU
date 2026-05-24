@@ -58,6 +58,7 @@
 
 - `docs/*.md`: design, verification, synthesis, bus, wrapper, and development
   notes.
+- `docs/performance.md`: simulation performance reporting notes.
 
 ## Generated/Ignored Outputs
 
