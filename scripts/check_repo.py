@@ -19,10 +19,13 @@ REQUIRED_FILES = (
     "rtl/tinynpu_apb_wrapper.sv",
     "tb/tb_tinynpu_top.sv",
     "tb/tb_tinynpu_apb_wrapper.sv",
+    "tb/tb_tinynpu_apb_dma_model.sv",
     "model/golden_matmul.py",
     "sim/run_sim.py",
+    "sim/run_apb_dma_sim.py",
     "docs/bus_protocol.md",
     "docs/coverage.md",
+    "docs/dma_model.md",
     "docs/results.md",
 )
 

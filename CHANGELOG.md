@@ -1,5 +1,11 @@
 # Changelog
 
+## v16
+
+- Added a DMA-style APB system simulation model using testbench external memory.
+- Added `make sim-apb-dma` and a structured APB DMA-model simulation summary.
+- Documented that this is not synthesizable DMA RTL.
+
 ## v15
 
 - Added optional APB-lite-style wrapper around `tinynpu_top`.

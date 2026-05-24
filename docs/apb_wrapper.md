@@ -44,6 +44,8 @@ read data.
 ## Current Limitations
 
 - Focused APB wrapper testbench only; not full APB protocol coverage.
+- A DMA-style APB system testbench exists, but it is a testbench model only,
+  not synthesizable DMA RTL.
 - No APB error signaling yet.
 - No APB protection, strobe, or byte-lane support.
-- No AXI, DMA, SRAM macro, or SoC interconnect integration.
+- No AXI, real DMA, SRAM macro, or SoC interconnect integration.
