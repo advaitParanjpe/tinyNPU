@@ -1,5 +1,18 @@
 # Changelog
 
+## v29
+
+- Added optional `tinynpu_axi_dma_wrapper`.
+- Added AXI4 write master support for C result stores.
+- Completed the single-beat AXI DMA path: AXI reads load A/B and AXI writes
+  store C.
+- Added AXI DMA simulation for identity, mixed signed, AWREADY backpressure,
+  WREADY backpressure, delayed BVALID, BRESP error, write timeout, and done IRQ
+  behavior.
+- Added `make sim-axi-dma` and `make synth-axi-dma`.
+- Kept bursts, IDs, multiple outstanding transactions, MAC changes, and
+  core/APB wrapper port changes out of scope.
+
 ## v28
 
 - Added optional `tinynpu_axi_read_dma_wrapper`.

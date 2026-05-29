@@ -9,6 +9,7 @@
 - Synthesizable DMA descriptor wrapper with DMA FSM and abstract memory port.
 - Optional AXI4-Lite control wrapper around the DMA descriptor wrapper.
 - Optional AXI read-DMA wrapper for single-beat A/B loads.
+- Optional full single-beat AXI DMA wrapper for A/B loads and C stores.
 - Descriptor done IRQ support on the descriptor and AXI-Lite wrappers.
 - DMA memory/core timeout handling, error codes, and error IRQ verification.
 - Fixed-latency and deterministic backpressure tests for the abstract memory port.
@@ -20,7 +21,6 @@
 ## Next
 
 - Memory latency model for system-level simulation.
-- AXI write master for C result stores.
 - Burst transfers for AXI A/B loads and C stores.
 - Memory error-response model beyond timeout for the abstract memory port.
 - Technology-mapped synthesis setup and initial timing/PPA estimates.

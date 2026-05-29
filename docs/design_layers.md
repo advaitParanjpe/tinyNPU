@@ -157,7 +157,30 @@ Targets:
 
 See `docs/axi_read_dma_wrapper.md`.
 
-## Layer 6: DMA-Style Simulation Model
+## Layer 6: AXI DMA Wrapper
+
+File:
+
+- `rtl/tinynpu_axi_dma_wrapper.sv`
+
+Purpose:
+
+Optional AXI4-Lite controlled wrapper that uses AXI4 reads to load A/B and AXI4
+writes to store C. Transactions are single-beat only and issued one at a time.
+
+This completes a basic AXI memory DMA path without adding bursts, IDs, or
+multiple outstanding transactions.
+
+Status: synthesizable.
+
+Targets:
+
+- Test: `make sim-axi-dma`
+- Synthesize: `make synth-axi-dma`
+
+See `docs/axi_dma_wrapper.md`.
+
+## Layer 7: DMA-Style Simulation Model
 
 File:
 
@@ -182,8 +205,8 @@ Targets:
 
 ## Not Implemented Yet
 
-- Full AXI/AHB read/write memory master.
 - Burst transfers.
+- Multiple outstanding AXI transactions.
 - Byte strobes on the abstract memory port, memory error handling, and full
   interrupt-controller integration.
 - SRAM macro integration.

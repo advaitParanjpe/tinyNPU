@@ -12,6 +12,8 @@ The wrapper also passes through the descriptor wrapper's `irq` output.
 v28 adds `tinynpu_axi_read_dma_wrapper` as a separate optional block for AXI
 read-master A/B loads. This AXI-Lite wrapper remains the control-only path and
 is unchanged.
+v29 adds `tinynpu_axi_dma_wrapper` as a separate optional block for single-beat
+AXI read/write DMA. This AXI-Lite wrapper still remains the control-only path.
 
 ## Layering
 

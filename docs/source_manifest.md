@@ -19,6 +19,8 @@
   and descriptor IRQ is passed through.
 - `rtl/tinynpu_axi_read_dma_wrapper.sv`: AXI4-Lite controlled wrapper with an
   AXI4 read master for A/B loads and an abstract C write port.
+- `rtl/tinynpu_axi_dma_wrapper.sv`: AXI4-Lite controlled wrapper with AXI4 read
+  master loads for A/B and AXI4 write master stores for C.
 
 ## Simulation-Only RTL/Checkers
 
@@ -37,6 +39,8 @@
   regression.
 - `tb/tb_tinynpu_axi_lite_wrapper.sv`: AXI4-Lite control-wrapper regression.
 - `tb/tb_tinynpu_axi_read_dma_wrapper.sv`: AXI read-DMA wrapper regression.
+- `tb/tb_tinynpu_axi_dma_wrapper.sv`: full single-beat AXI DMA wrapper
+  regression.
 
 ## Models And Simulation Runners
 
@@ -48,14 +52,24 @@
   runner.
 - `sim/run_axi_lite_sim.py`: AXI4-Lite control-wrapper simulation runner.
 - `sim/run_axi_read_dma_sim.py`: AXI read-DMA wrapper simulation runner.
+- `sim/run_axi_dma_sim.py`: full single-beat AXI DMA wrapper simulation runner.
 
 ## Scripts
 
 - `scripts/check_repo.py`: repository static checks.
+- `scripts/check_asic_flow.py`: ASIC-flow scaffold checks for the row4
+  `tinynpu_top` OpenLane setup.
 - `scripts/synth_yosys.sh`: Yosys synthesis entry point.
 - `scripts/synth_yosys.ys`: Yosys synthesis script template.
 - `scripts/parse_yosys_stats.py`: synthesis report parser.
 - `scripts/save_result_snapshot.py`: result summary snapshot writer.
+
+## ASIC Flow Scaffold
+
+- `constraints/tinynpu_top.sdc`: initial ASIC-style clock and IO timing
+  constraints for the row4 `tinynpu_top` implementation target.
+- `openlane/tinynpu_top/config.json`: initial OpenLane-style configuration for
+  the row4 `tinynpu_top` implementation target.
 
 ## Test Vectors
 
@@ -68,6 +82,8 @@
 
 - `docs/*.md`: design, verification, synthesis, bus, wrapper, and development
   notes.
+- `docs/asic_flow_plan.md`: ASIC-flow pivot plan, source list, constraints,
+  OpenLane assumptions, and current blockers.
 - `docs/performance.md`: simulation performance reporting notes.
 
 ## Generated/Ignored Outputs

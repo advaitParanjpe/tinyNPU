@@ -13,6 +13,9 @@ It combines:
 
 This is not a full AXI DMA engine yet. v28 supports single-beat AXI reads only,
 has no AXI write master, and has no bursts or outstanding transactions.
+v29 adds `tinynpu_axi_dma_wrapper` as the next wrapper for AXI reads and AXI
+writes. Keep this read-DMA wrapper for incremental read-side testing and the
+abstract C write path.
 
 ## Interfaces
 

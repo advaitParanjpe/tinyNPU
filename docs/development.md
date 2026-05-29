@@ -23,10 +23,12 @@ make sim-apb-dma
 make sim-dma-desc
 make sim-axi-lite
 make sim-axi-read-dma
+make sim-axi-dma
 make synth-apb
 make synth-dma-desc
 make synth-axi-lite
 make synth-axi-read-dma
+make synth-axi-dma
 ```
 
 `make sim-dma-desc` also writes DMA performance data to
@@ -36,6 +38,9 @@ the AXI-Lite pass-through IRQ and memory-timeout error path.
 `make sim-axi-read-dma` verifies the optional AXI read-DMA wrapper for A/B AXI
 loads, abstract C stores, read-channel backpressure, RRESP errors, timeouts, and
 done IRQ behavior.
+`make sim-axi-dma` verifies the full single-beat AXI DMA wrapper for A/B AXI
+loads, C AXI stores, write-channel backpressure, BRESP errors, write timeouts,
+and done IRQ behavior.
 
 Run the full variant comparison before commit:
 
@@ -59,8 +64,9 @@ make precommit
 
 This runs `make check`, `make golden`, `make compare`, `make sim-apb`,
 `make sim-apb-dma`, `make sim-dma-desc`, `make sim-axi-lite`,
-`make sim-axi-read-dma`, `make synth-apb`, `make synth-dma-desc`,
-`make synth-axi-lite`, and `make synth-axi-read-dma`.
+`make sim-axi-read-dma`, `make sim-axi-dma`, `make synth-apb`,
+`make synth-dma-desc`, `make synth-axi-lite`, `make synth-axi-read-dma`, and
+`make synth-axi-dma`.
 
 ## Tools
 

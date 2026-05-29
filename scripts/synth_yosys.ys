@@ -10,6 +10,7 @@ read_verilog -sv rtl/tinynpu_apb_wrapper.sv
 read_verilog -sv rtl/tinynpu_dma_descriptor_wrapper.sv
 read_verilog -sv rtl/tinynpu_axi_lite_wrapper.sv
 read_verilog -sv rtl/tinynpu_axi_read_dma_wrapper.sv
+read_verilog -sv rtl/tinynpu_axi_dma_wrapper.sv
 
 hierarchy -check -top @TOP_MODULE@
 proc

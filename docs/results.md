@@ -23,6 +23,21 @@ top, not the MAC datapath comparison.
 | v27 | `tinynpu_dma_descriptor_wrapper` | row4 | 17839 | Adds memory/core timeout handling, `DMA_ERROR_CODE`, and verified error IRQ behavior |
 | v27 | `tinynpu_axi_lite_wrapper` | row4 | 18141 | AXI4-Lite wrapper with descriptor timeout/error IRQ path; no full AXI memory master |
 | v28 | `tinynpu_axi_read_dma_wrapper` | row4 | 19053 | AXI4-Lite control plus single-beat AXI read master for A/B and abstract C write port; no AXI write master or bursts |
+| v29 | `tinynpu_axi_dma_wrapper` | row4 | 19692 | AXI4-Lite control plus single-beat AXI read master for A/B and AXI write master for C; no bursts or outstanding transactions |
+
+## Full AXI DMA Milestone Results
+
+Latest local `make sim-axi-dma` and `make synth-axi-dma` results:
+
+| top | simulation | named tests | Yosys cells | wires | wire bits | notes |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `tinynpu_axi_dma_wrapper` | passed | 12 | 19692 | 6671 | 56226 | AXI4-Lite control, single-beat AXI reads for A/B, single-beat AXI writes for C |
+
+The 12 full-DMA simulation tests are `axi_dma_identity`,
+`axi_dma_mixed_signed`, `axi_dma_ar_backpressure`, `axi_dma_rvalid_delay`,
+`axi_dma_aw_backpressure`, `axi_dma_w_backpressure`, `axi_dma_bvalid_delay`,
+`axi_dma_rresp_error`, `axi_dma_read_timeout`, `axi_dma_bresp_error`,
+`axi_dma_write_timeout`, and `axi_dma_irq_done`.
 
 The descriptor-driven APB DMA-style testbench still exists as a higher-level
 simulation model. The synthesizable descriptor wrapper now has its own abstract
@@ -61,6 +76,13 @@ v28 adds AXI read-DMA wrapper simulation with `make sim-axi-read-dma`. It
 verifies AXI read loading of A/B, abstract C store-back, AR backpressure,
 delayed RVALID, RRESP error code `3`, timeout behavior, and done IRQ
 assertion/clear. There is no AXI write master or burst support yet.
+
+v29 adds full single-beat AXI DMA wrapper simulation with `make sim-axi-dma`.
+It verifies AXI read loading of A/B, AXI write store-back of C, ARREADY
+backpressure, delayed RVALID, AWREADY backpressure, WREADY backpressure,
+delayed BVALID, RRESP error code `3`, BRESP error code `4`, read/write timeout
+behavior, and done IRQ assertion/clear. Burst and multiple-outstanding AXI
+behavior remain out of scope.
 
 Relative values use the default `row4` variant as the baseline. Synthesis is
 generic Yosys only, not technology-mapped PPA.

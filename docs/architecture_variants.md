@@ -5,7 +5,8 @@ This document tracks possible datapath variants. The default RTL remains the
 
 See `docs/design_layers.md` for how these datapaths fit under the core,
 optional APB wrapper, DMA descriptor wrapper, AXI-Lite control wrapper, AXI
-read-DMA wrapper, and testbench-only DMA-style model.
+read-DMA wrapper, full single-beat AXI DMA wrapper, and testbench-only
+DMA-style model.
 
 All variants use the same top-level bus, A/B int8 scratchpads, C int32 result
 buffer, and `tinynpu_mac_array` wrapper. Only the internal MAC datapath selected

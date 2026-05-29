@@ -37,7 +37,7 @@ intentionally abort the DMA operation before normal store-back completion.
 
 ## What Is Not Measured
 
-- No AXI write-master timing.
+- No burst-capable AXI timing.
 - No burst behavior.
 - No outstanding transactions.
 - No memory error responses.

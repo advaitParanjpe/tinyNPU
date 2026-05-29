@@ -18,6 +18,9 @@ v28 adds `tinynpu_axi_read_dma_wrapper` as a separate optional wrapper that uses
 AXI4 reads for A/B loads and an abstract write port for C stores. This
 descriptor wrapper remains the APB-style abstract-memory implementation and is
 kept intact.
+v29 adds `tinynpu_axi_dma_wrapper` as a separate optional wrapper that uses AXI4
+reads for A/B loads and AXI4 writes for C stores. This descriptor wrapper is
+unchanged.
 
 ## External Memory Port
 

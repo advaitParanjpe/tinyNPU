@@ -34,6 +34,9 @@
 - AXI read-DMA behavior: AXI single-beat reads for A/B loads, abstract C
   store-back, AR backpressure, delayed RVALID, RRESP error code reporting,
   timeout handling, and done IRQ behavior
+- AXI DMA behavior: AXI single-beat reads for A/B loads, AXI single-beat writes
+  for C stores, AR/RVALID and AW/W/B backpressure, RRESP/BRESP error code
+  reporting, read/write timeout handling, and done IRQ behavior
 - Descriptor-driven DMA-style APB system-flow behavior: descriptor programming,
   external-memory load of A/B, accelerator start, STATUS.done polling,
   C store-back, back-to-back operations, start while descriptor model is busy,
@@ -69,10 +72,9 @@
 
 - Functional coverage metrics
 - Full APB protocol coverage
-- Full AXI/AHB read/write DMA data-mover behavior
-- AXI write master behavior
+- Full AXI/AHB protocol coverage
 - Burst transfers and multiple outstanding memory transactions
-- Memory bus error responses beyond AXI read RRESP and timeout
+- Memory bus error responses beyond AXI RRESP/BRESP and timeout
 - Longer memory-port backpressure seed sweeps
 - Randomized bus timing with backpressure, since `bus_ready` is currently always high
 - Larger matrix sizes or configurable dimensions

@@ -1,6 +1,6 @@
 # tinyNPU
 
-tinyNPU v28 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
+tinyNPU v29 is a minimal SystemVerilog RTL scaffold for a fixed 4x4 signed int8
 matrix multiply accelerator tile with a simple testbench-friendly register bus.
 
 ## Current Status
@@ -12,6 +12,8 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - Optional AXI4-Lite control wrapper around the DMA descriptor wrapper.
 - Optional AXI read-DMA wrapper with AXI4-Lite control, single-beat AXI reads
   for A/B loads, and an abstract write port for C stores.
+- Optional full single-beat AXI DMA wrapper with AXI4-Lite control, AXI reads
+  for A/B loads, and AXI writes for C stores.
 - DMA done IRQ support on the descriptor wrapper and AXI4-Lite wrapper.
 - DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, a four-lane row MAC FSM.
@@ -25,6 +27,8 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - DMA memory/core timeout handling with error codes and error IRQ verification.
 - AXI read-DMA verification for AR backpressure, delayed RVALID, RRESP errors,
   timeout handling, and done IRQ behavior.
+- AXI DMA verification for AR/RVALID and AW/W/B backpressure, RRESP/BRESP
+  errors, read/write timeouts, and done IRQ behavior.
 - Generic Yosys synthesis for all variants.
 - Lightweight repository checks for commit readiness.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
@@ -48,11 +52,13 @@ make sim-apb-dma
 make sim-dma-desc
 make sim-axi-lite
 make sim-axi-read-dma
+make sim-axi-dma
 make synth
 make synth-apb
 make synth-dma-desc
 make synth-axi-lite
 make synth-axi-read-dma
+make synth-axi-dma
 make results
 make sim-serial
 make synth-serial
@@ -102,9 +108,9 @@ fixed 4x4 design.
 The A/B scratchpads and C result buffer are separate behavioral RTL modules.
 They are still register-based storage, not SRAM macros.
 
-There is no full AXI write master, SRAM macro, burst engine, or outstanding
-memory transaction support in v28. APB is available as an optional wrapper
-around the existing simple-bus core. A second optional wrapper adds
+There is no SRAM macro, burst engine, or outstanding memory transaction support
+in v29. APB is available as an optional wrapper around the existing simple-bus
+core. A second optional wrapper adds
 synthesizable descriptor registers at `0x100`-`0x120`, while forwarding
 `0x000`-`0x0ff` to the APB core wrapper. Its DMA-control FSM runs
 `LOAD_A -> LOAD_B -> START_CORE -> WAIT_CORE -> STORE_C` and moves matrix data
@@ -134,6 +140,26 @@ with an AXI4 read master for A/B loads. It uses single-beat reads only
 `DMA_ERROR_CODE = 3`; handshake timeouts use error code `1`. There is still no
 AXI write master and no burst support.
 
+v29 adds `tinynpu_axi_dma_wrapper`, an optional full single-beat AXI DMA wrapper.
+It keeps AXI4-Lite descriptor control, uses AXI reads for A/B loads, and uses
+AXI writes for C stores. Writes are sequenced as AW, W, then B with `AWLEN = 0`,
+`AWSIZE = 3'b010`, `WSTRB = 4'b1111`, and `WLAST = 1`. BRESP errors report
+`DMA_ERROR_CODE = 4`. There is still no burst support and no multiple
+outstanding AXI transactions.
+
+## Full AXI DMA Milestone
+
+`tinynpu_axi_dma_wrapper` is the top-level full-DMA integration wrapper for the
+current project freeze. It combines AXI4-Lite descriptor/control registers,
+single-beat AXI4 reads for A/B loads, single-beat AXI4 writes for C result
+stores, descriptor done/error status, configurable memory/core timeouts, and a
+combined done/error `irq` output.
+
+The full-DMA milestone is intentionally scoped to one transaction at a time:
+each A/B element is loaded by one AXI read, each C element is stored by one AXI
+write, and there are no bursts, IDs, or multiple outstanding transactions. This
+is the integration point to freeze before moving focus to ASIC flow work.
+
 ## Design Layers
 
 The repo separates synthesizable RTL from optional wrappers and testbench-only
@@ -144,6 +170,7 @@ models:
 - `tinynpu_dma_descriptor_wrapper` is a synthesizable descriptor/status wrapper with a DMA-control FSM and abstract memory port.
 - `tinynpu_axi_lite_wrapper` is a synthesizable AXI4-Lite control wrapper around the DMA descriptor wrapper.
 - `tinynpu_axi_read_dma_wrapper` is a synthesizable AXI4-Lite controlled wrapper with an AXI read master for A/B loads and an abstract C write port.
+- `tinynpu_axi_dma_wrapper` is a synthesizable full single-beat AXI DMA wrapper with AXI reads for A/B and AXI writes for C.
 - `tb/tb_tinynpu_apb_dma_model.sv` is a testbench-only DMA-style model.
 
 See `docs/design_layers.md` and `docs/source_manifest.md` for the full layer and
@@ -217,6 +244,7 @@ The current self-checking Icarus simulation covers:
 - synthesizable DMA descriptor-wrapper tests for descriptor read/write, DMA memory movement, core launch, busy core-window blocking, and forwarded core access
 - AXI4-Lite control-wrapper tests for descriptor programming, forwarded core access, DMA launch/polling, channel stalls, invalid/unaligned access, and WSTRB behavior
 - AXI read-DMA wrapper tests for AXI A/B loads, abstract C stores, AR backpressure, delayed RVALID, RRESP errors, timeout handling, and done IRQ behavior
+- AXI DMA wrapper tests for AXI A/B loads, AXI C stores, AR/RVALID and AW/W/B backpressure, RRESP/BRESP errors, read/write timeout handling, and done IRQ behavior
 - descriptor-wrapper and AXI-Lite done IRQ assertion, pending status, clear behavior, and disabled-IRQ behavior
 - descriptor-wrapper memory/core timeout handling, error code reporting, error IRQ assertion/clear, and recovery after timeout
 - fixed-latency and deterministic random-backpressure tests for the descriptor wrapper memory port
@@ -253,6 +281,8 @@ make synth
 make synth-apb
 make synth-dma-desc
 make synth-axi-lite
+make synth-axi-read-dma
+make synth-axi-dma
 make synth-serial
 make synth-full16
 ```
@@ -262,6 +292,9 @@ Variant-specific outputs are written under:
 - `build/synth/row4/`
 - `build/synth/apb/`
 - `build/synth/dma_desc/`
+- `build/synth/axi_lite/`
+- `build/synth/axi_read_dma/`
+- `build/synth/axi_dma/`
 - `build/synth/serial/`
 - `build/synth/full16/`
 
@@ -277,6 +310,12 @@ Run lightweight static repository checks:
 make check
 ```
 
+Validate the ASIC-flow scaffold without launching physical design:
+
+```sh
+make asic-check
+```
+
 Run the longer commit-readiness flow:
 
 ```sh
@@ -284,9 +323,10 @@ make precommit
 ```
 
 `make precommit` runs `make check`, `make golden`, `make compare`, APB wrapper
-simulation/synthesis, descriptor-wrapper simulation/synthesis, and the
-descriptor-driven APB DMA-style simulation model. See `docs/development.md` for
-the recommended local workflow.
+simulation/synthesis, descriptor-wrapper simulation/synthesis, AXI-Lite,
+AXI read-DMA, and full AXI DMA simulation/synthesis, and the descriptor-driven
+APB DMA-style simulation model. See `docs/development.md` for the recommended
+local workflow.
 
 ## Results Artifacts
 
@@ -301,7 +341,9 @@ Variant-specific summaries are written under:
 - `build/sim/row4/`, `build/sim/serial/`, and `build/sim/full16/`
 - `build/synth/row4/`, `build/synth/serial/`, and `build/synth/full16/`
 - `build/sim/apb/`, `build/sim/apb_dma/`, and `build/sim/dma_desc_wrapper/`
-- `build/synth/apb/` and `build/synth/dma_desc/`
+- `build/sim/axi_lite/`, `build/sim/axi_read_dma/`, and `build/sim/axi_dma/`
+- `build/synth/apb/`, `build/synth/dma_desc/`, `build/synth/axi_lite/`,
+  `build/synth/axi_read_dma/`, and `build/synth/axi_dma/`
 
 Each `build/sim/<variant>/` directory contains:
 
@@ -320,6 +362,7 @@ Human-readable notes live in:
 - `docs/architecture_variants.md`
 - `docs/coverage.md`
 - `docs/performance.md`
+- `docs/asic_flow_plan.md`
 - `docs/bus_protocol.md`
 - `docs/development.md`
 - `docs/memory_architecture.md`
