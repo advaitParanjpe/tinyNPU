@@ -45,6 +45,22 @@ memory port and data-movement tests.
 v24 adds simulation performance reporting for the descriptor wrapper. It does
 not change synthesis, so RTL synthesis size is unchanged from v21-v23.
 
+## Streaming Milestone Results
+
+The AXI4-Stream work is simulation-only in this release. It is not included in
+the OpenLane ASIC targets and is not an ASIC timing-closure claim.
+
+| top | command | simulation | tests | key metrics | notes |
+| --- | --- | --- | ---: | --- | --- |
+| `tinynpu_axis_stream_tile_core` | `make sim-axis-stream` | passed | 13 | tile-at-a-time | AXI4-Stream subset with input/output backpressure and malformed-frame tests |
+| `tinynpu_axis_stream_npu` | `make sim-axis-stream-npu` | passed | 11 | 156-cycle first tile, 64 cycles/tile steady state, 63 cycles/tile observed input acceptance | Double-buffered single-clock prototype with load/compute/output overlap observed |
+
+For the double-buffered stream NPU, throughput estimates are frequency
+dependent: `tiles/s = f_clk / 64`, and each 4x4 tile is 64 MACs. The documented
+examples are 1.40625M tiles/s and 90M MAC/s at 90 MHz, or 1.5625M tiles/s and
+100M MAC/s at 100 MHz. These are arithmetic estimates from simulation cycle
+counts, not production-NPU or signoff-clean claims.
+
 ## DMA Descriptor Wrapper Performance
 
 Measured by `make sim-dma-desc` over the abstract memory port:

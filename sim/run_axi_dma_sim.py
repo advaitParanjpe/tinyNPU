@@ -110,6 +110,8 @@ def main():
         "-DTINYNPU_SIM_ASSERT",
         "-I",
         ".",
+        "-I",
+        "rtl",
         "-o",
         str(sim_out),
     ]

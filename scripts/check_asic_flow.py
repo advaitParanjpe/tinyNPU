@@ -10,6 +10,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ROW4_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top" / "config.json"
 ROW4_PIPE_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe" / "config.json"
 ROW4_PIPE2_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe2" / "config.json"
+ROW4_PIPE2_95_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe2_95mhz" / "config.json"
+ROW4_PIPE2_93_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe2_93mhz" / "config.json"
+ROW4_PIPE2_91_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe2_91mhz" / "config.json"
+ROW4_PIPE2_DUPA_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe2_dupa" / "config.json"
 SDC_PATH = REPO_ROOT / "constraints" / "tinynpu_top.sdc"
 ROW4_EXPECTED_SOURCES = (
     "rtl/tinynpu_mac_row4.sv",
@@ -29,6 +33,14 @@ ROW4_PIPE_EXPECTED_SOURCES = (
 ROW4_PIPE2_EXPECTED_SOURCES = (
     "rtl/tinynpu_defs.svh",
     "rtl/tinynpu_mac_row4_pipe2.sv",
+    "rtl/tinynpu_mac_array.sv",
+    "rtl/tinynpu_scratchpad_i8.sv",
+    "rtl/tinynpu_result_buffer_i32.sv",
+    "rtl/tinynpu_top.sv",
+)
+ROW4_PIPE2_DUPA_EXPECTED_SOURCES = (
+    "rtl/tinynpu_defs.svh",
+    "rtl/tinynpu_mac_row4_pipe2_dupa.sv",
     "rtl/tinynpu_mac_array.sv",
     "rtl/tinynpu_scratchpad_i8.sv",
     "rtl/tinynpu_result_buffer_i32.sv",
@@ -96,6 +108,18 @@ def main():
     if rc != 0:
         return rc
     rc = check_config(ROW4_PIPE2_CONFIG_PATH, ROW4_PIPE2_EXPECTED_SOURCES, ["TINYNPU_MAC_ROW4_PIPE2"])
+    if rc != 0:
+        return rc
+    rc = check_config(ROW4_PIPE2_95_CONFIG_PATH, ROW4_PIPE2_EXPECTED_SOURCES, ["TINYNPU_MAC_ROW4_PIPE2"])
+    if rc != 0:
+        return rc
+    rc = check_config(ROW4_PIPE2_93_CONFIG_PATH, ROW4_PIPE2_EXPECTED_SOURCES, ["TINYNPU_MAC_ROW4_PIPE2"])
+    if rc != 0:
+        return rc
+    rc = check_config(ROW4_PIPE2_91_CONFIG_PATH, ROW4_PIPE2_EXPECTED_SOURCES, ["TINYNPU_MAC_ROW4_PIPE2"])
+    if rc != 0:
+        return rc
+    rc = check_config(ROW4_PIPE2_DUPA_CONFIG_PATH, ROW4_PIPE2_DUPA_EXPECTED_SOURCES, ["TINYNPU_MAC_ROW4_PIPE2_DUPA"])
     if rc != 0:
         return rc
 

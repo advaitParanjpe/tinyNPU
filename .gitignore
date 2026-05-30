@@ -1,5 +1,6 @@
 build/
 obj_dir/
+openlane/**/runs/
 *.vcd
 *.vvp
 *.fst

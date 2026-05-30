@@ -98,6 +98,78 @@ WNS/TNS and reduces setup violations. It is still not timing closed or signoff
 clean: max-slew and max-cap violations remain, and the 10 ns row4_pipe3 run
 reports one antenna pin/net violation despite clean DRC and LVS.
 
+## Selected 95 MHz Implementation Target
+
+The selected realistic implementation target is row4_pipe2 at 10.5 ns, about
+95.2 MHz. This target is separate from the preserved 10 ns / 100 MHz row4_pipe2
+exploration run. It starts from the retained tuned row4_pipe2 physical-flow
+settings and uses a row4_pipe2-specific 10.5 ns SDC.
+
+| Item | Value |
+| --- | --- |
+| OpenLane config | `openlane/tinynpu_top_row4_pipe2_95mhz/config.json` |
+| SDC | `openlane/tinynpu_top_row4_pipe2_95mhz/tinynpu_top_10p5.sdc` |
+| Run directory | `openlane/tinynpu_top_row4_pipe2_95mhz/runs/RUN_2026-05-30_05-02-21` |
+| Flow status | Complete, `flow__errors__count = 0` |
+| Clock target | 10.5 ns / 95.2 MHz on `clk` |
+| PDK / standard-cell library | `sky130A` / `sky130_fd_sc_hd` |
+| Die / core area | 640,000 um^2 / 613,701 um^2 |
+| Utilization | 19.47% |
+| Std-cell count / area | 24,398 / 119,487 um^2 |
+| Setup WNS / TNS / violations | -0.301 ns / -0.604 ns / 6 |
+| Hold WNS / TNS / violations | 0 ns / 0 ns / 0 |
+| Max-slew violations | 3,008 |
+| Max-cap violations | 15 |
+| Antenna violations | 1 pin on 1 net |
+| DRC | Magic 0 errors, KLayout 0 errors |
+| LVS | Passed, 0 LVS errors |
+| Power estimate | 0.02555 W total, with 0.01462 W internal, 0.01093 W switching, and 0.000000116 W leakage |
+| Status | Not setup-clean and not signoff-clean |
+
+Primary final artifacts for this run are:
+
+| Artifact | Path |
+| --- | --- |
+| GDS | `openlane/tinynpu_top_row4_pipe2_95mhz/runs/RUN_2026-05-30_05-02-21/final/gds/tinynpu_top.gds` |
+| DEF | `openlane/tinynpu_top_row4_pipe2_95mhz/runs/RUN_2026-05-30_05-02-21/final/def/tinynpu_top.def` |
+| Gate-level netlist | `openlane/tinynpu_top_row4_pipe2_95mhz/runs/RUN_2026-05-30_05-02-21/final/nl/tinynpu_top.nl.v` |
+| Post-route netlist | `openlane/tinynpu_top_row4_pipe2_95mhz/runs/RUN_2026-05-30_05-02-21/final/pnl/tinynpu_top.pnl.v` |
+| Metrics | `openlane/tinynpu_top_row4_pipe2_95mhz/runs/RUN_2026-05-30_05-02-21/final/metrics.csv` |
+
+The 100 MHz row4_pipe2 run remains the aggressive exploration target and is
+still slightly negative: WNS/TNS -0.343 / -1.588 ns with 21 setup violations.
+The 95 MHz target is the realistic selected implementation target, but this
+specific OpenLane run is still not setup-clean. Because setup did not close,
+no additional electrical-cleanup experiment was kept for this target. The run
+also has max-slew, max-cap, and antenna violations, so it is not signoff-clean.
+
+## Selected Implementation Frequency Sweep
+
+After the 10.5 ns / 95.2 MHz selected row4_pipe2 target remained setup-negative,
+two lower-clock row4_pipe2 targets were run as separate OpenLane configurations.
+These runs preserve the documented 10 ns and 10.5 ns results and change only the
+row4_pipe2 ASIC target clock period/SDC.
+
+| Target | OpenLane config | Run directory | Flow | Setup WNS/TNS (ns) | Setup violations | Hold WNS/TNS/violations | Slew violations | Max-cap violations | Antenna violations | DRC/LVS | Utilization | Std-cell area (um^2) | Power (W) | Status |
+| --- | --- | --- | --- | ---: | ---: | --- | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- |
+| 10.5 ns / 95.2 MHz | `openlane/tinynpu_top_row4_pipe2_95mhz/config.json` | `openlane/tinynpu_top_row4_pipe2_95mhz/runs/RUN_2026-05-30_05-02-21` | Complete | -0.301 / -0.604 | 6 | 0 / 0 / 0 | 3,008 | 15 | 1 | Clean / clean | 19.47% | 119,487 | 0.02555 | Not clean |
+| 10.75 ns / 93.0 MHz | `openlane/tinynpu_top_row4_pipe2_93mhz/config.json` | `openlane/tinynpu_top_row4_pipe2_93mhz/runs/RUN_2026-05-30_05-19-41` | Complete | -0.260 / -0.504 | 7 | 0 / 0 / 0 | 3,320 | 15 | 1 | Clean / clean | 19.43% | 119,239 | 0.02488 | Not clean |
+| 11.0 ns / 90.9 MHz | `openlane/tinynpu_top_row4_pipe2_91mhz/config.json` | `openlane/tinynpu_top_row4_pipe2_91mhz/runs/RUN_2026-05-30_05-33-13` | Complete | -0.172 / -0.238 | 4 | 0 / 0 / 0 | 3,258 | 17 | 0 | Clean / clean | 19.44% | 119,321 | 0.02426 | Not clean |
+
+The 11.0 ns run improves WNS/TNS relative to the 10.5 ns and 10.75 ns selected
+targets and is antenna/DRC/LVS clean, but it is still not setup-clean. Because
+the requested condition for an electrical-cleanup pass was setup closure at
+11.0 ns, no 11.0 ns cleanup pass was run. None of the selected row4_pipe2
+frequency-sweep targets is signoff clean: setup remains negative at all three
+periods, and max-slew/max-cap violations remain throughout.
+
+The highest frequency target that is closest to signoff-clean is still not
+closed. Among these selected row4_pipe2 targets, 11.0 ns / 90.9 MHz is the best
+documented implementation point because it has the least-negative setup result,
+hold is clean, antenna is clean, and DRC/LVS are clean. It should be described
+as the best current ASIC-style implementation attempt, not as timing-closed or
+signoff-clean.
+
 ## Row4 Pipe Physical-Tuning Experiment
 
 A controlled 10 ns physical-tuning experiment was run for the separate
@@ -156,7 +228,10 @@ fixes antenna behavior.
   row4, row4_pipe, row4_pipe2, row4_pipe2_dupa, and row4_pipe3. Some row4 sweep
   runs and the documented row4_pipe3 run also report antenna violations.
 - The 100 MHz clock is a bring-up target, not a closed timing target for this
-  implementation. The 50 MHz sweep point closes setup only, not full signoff.
+  implementation. The 95 MHz row4_pipe2 target is the selected realistic
+  implementation target, but the documented 10.5 ns run still has setup,
+  max-slew, max-cap, and antenna violations. The 50 MHz sweep point closes setup
+  only, not full signoff.
 - The A/B scratchpads and C result buffer are register-based standard-cell
   storage in this run. The OpenLane metrics report zero macros, so these are not
   SRAM macros.
