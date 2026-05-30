@@ -64,31 +64,39 @@ not a shuttle or fab submission.
 
 ## Row4 vs Pipelined Row4 Variants
 
-The `row4_pipe`, `row4_pipe2`, and `row4_pipe3` ASIC targets are separate
+The `row4_pipe`, `row4_pipe2`, `row4_pipe2_dupa`, and `row4_pipe3` ASIC targets are separate
 OpenLane configurations. They preserve the existing row4 OpenLane target and
 use the same 10 ns / 100 MHz SDC while defining `TINYNPU_MAC_ROW4_PIPE`,
-`TINYNPU_MAC_ROW4_PIPE2`, or `TINYNPU_MAC_ROW4_PIPE3` for synthesis. Their ASIC
-source lists are limited to the shared defs include, the selected MAC variant,
-`tinynpu_mac_array`, the A/B scratchpad, the C result buffer, and
-`tinynpu_top`.
+`TINYNPU_MAC_ROW4_PIPE2`, `TINYNPU_MAC_ROW4_PIPE2_DUPA`, or
+`TINYNPU_MAC_ROW4_PIPE3` for synthesis. Their ASIC source lists are limited to
+the shared defs include, the selected MAC variant, `tinynpu_mac_array`, the A/B
+scratchpad, the C result buffer, and `tinynpu_top`.
 
 | Variant | OpenLane config | Run directory | Clock | Flow | Latency / generic cells | Setup WNS/TNS (ns) | Setup violations | Slew violations | Max-cap violations | Antenna violations | DRC/LVS | Utilization | Std-cell area (um^2) | Power (W) | Status |
 | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- |
 | row4 | `openlane/tinynpu_top/config.json` | `openlane/tinynpu_top/runs/RUN_2026-05-30_00-36-33` | 10 ns / 100 MHz | Complete | 26 cyc / 14,514 | -5.831 / -372.767 | 319 | 3,003 | 29 | 2 | Clean / clean | 20.89% | 128,222 | 0.02816 | Not clean |
 | row4_pipe | `openlane/tinynpu_top_row4_pipe/config.json` | `openlane/tinynpu_top_row4_pipe/runs/RUN_2026-05-30_01-55-41` | 10 ns / 100 MHz | Complete | 42 cyc / 15,026 | -1.901 / -45.687 | 178 | 2,882 | 21 | 0 | Clean / clean | 18.99% | 116,558 | 0.02282 | Not clean |
 | row4_pipe2 | `openlane/tinynpu_top_row4_pipe2/config.json` | `openlane/tinynpu_top_row4_pipe2/runs/RUN_2026-05-30_02-58-13` | 10 ns / 100 MHz | Complete | 58 cyc / 15,198 | -0.343 / -1.588 | 21 | 3,150 | 10 | 0 | Clean / clean | 19.50% | 119,655 | 0.02683 | Not clean |
+| row4_pipe2_dupa | `openlane/tinynpu_top_row4_pipe2_dupa/config.json` | `openlane/tinynpu_top_row4_pipe2_dupa/runs/RUN_2026-05-30_04-42-51` | 10 ns / 100 MHz | Complete | 58 cyc / 15,198 | -0.314 / -1.716 | 16 | 3,199 | 20 | 0 | Clean / clean | 19.42% | 119,197 | 0.02008 | Not clean |
 | row4_pipe3 | `openlane/tinynpu_top_row4_pipe3/config.json` | `openlane/tinynpu_top_row4_pipe3/runs/RUN_2026-05-30_03-42-10` | 10 ns / 100 MHz | Complete | 74 cyc / 11,966 | -0.260 / -0.469 | 4 | 4,566 | 25 | 1 | Clean / clean | 20.00% | 122,740 | 0.01924 | Not clean |
 
 The row4_pipe run improves 10 ns setup WNS/TNS and reduces setup, slew, and
 max-cap violation counts relative to the row4 baseline in this flow. row4_pipe2
 adds an operand-select pipeline cut before product generation and further
 improves setup WNS/TNS and setup violation count. The row4_pipe2 row above uses
-the retained physical-tuning run for that target. row4_pipe3 splits product
-generation into registered low/high partial-product and product-sum stages,
-which further improves setup WNS/TNS and reduces setup violations. It is still
-not timing closed or signoff clean: max-slew and max-cap violations remain, and
-the 10 ns row4_pipe3 run reports one antenna pin/net violation despite clean DRC
-and LVS.
+the retained physical-tuning run for that target. row4_pipe2_dupa is derived
+from row4_pipe2 and duplicates the selected A operand into lane-local registers
+before the inferred signed multipliers, preserving the 58-cycle observed latency.
+It slightly improves WNS and setup violation count versus tuned row4_pipe2, but
+TNS, max-slew count, and max-cap count do not improve, so it is not a clear
+closure win. The run is DRC/LVS/antenna clean after OpenLane antenna repair; the
+console cell report showed substantial antenna-cell insertion, so this should be
+treated as a physical-flow result rather than evidence that the RTL change alone
+solved antenna risk. row4_pipe3 splits product generation into registered
+low/high partial-product and product-sum stages, which further improves setup
+WNS/TNS and reduces setup violations. It is still not timing closed or signoff
+clean: max-slew and max-cap violations remain, and the 10 ns row4_pipe3 run
+reports one antenna pin/net violation despite clean DRC and LVS.
 
 ## Row4 Pipe Physical-Tuning Experiment
 
@@ -142,11 +150,11 @@ fixes antenna behavior.
 
 - This is an ASIC-style RTL-to-GDS flow result only. The design has not been
   submitted to a shuttle or fab.
-- DRC and LVS are clean in the documented row4, row4_pipe, row4_pipe2, and
-  row4_pipe3 runs, but these results are not signoff clean.
+- DRC and LVS are clean in the documented row4, row4_pipe, row4_pipe2,
+  row4_pipe2_dupa, and row4_pipe3 runs, but these results are not signoff clean.
 - At 10 ns / 100 MHz, timing, max slew, and max capacitance issues remain for
-  row4, row4_pipe, row4_pipe2, and row4_pipe3. Some row4 sweep runs and the
-  documented row4_pipe3 run also report antenna violations.
+  row4, row4_pipe, row4_pipe2, row4_pipe2_dupa, and row4_pipe3. Some row4 sweep
+  runs and the documented row4_pipe3 run also report antenna violations.
 - The 100 MHz clock is a bring-up target, not a closed timing target for this
   implementation. The 50 MHz sweep point closes setup only, not full signoff.
 - The A/B scratchpads and C result buffer are register-based standard-cell

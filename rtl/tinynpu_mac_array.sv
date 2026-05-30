@@ -17,6 +17,8 @@ module tinynpu_mac_array (
   tinynpu_mac_serial u_mac (
 `elsif TINYNPU_MAC_ROW4_PIPE3
   tinynpu_mac_row4_pipe3 u_mac (
+`elsif TINYNPU_MAC_ROW4_PIPE2_DUPA
+  tinynpu_mac_row4_pipe2_dupa u_mac (
 `elsif TINYNPU_MAC_ROW4_PIPE2
   tinynpu_mac_row4_pipe2 u_mac (
 `elsif TINYNPU_MAC_ROW4_PIPE
