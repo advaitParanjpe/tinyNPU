@@ -25,27 +25,45 @@ release, or production NPU.
 ## Architecture
 
 ```mermaid
-flowchart TD
-  SW["software or testbench register access"] --> BUS["simple register bus"]
-  BUS --> TOP["tinynpu_top"]
-  TOP --> CTRL["CTRL and STATUS"]
-  TOP --> A["A scratchpad int8"]
-  TOP --> B["B scratchpad int8"]
-  A --> MAC["MAC array variants"]
-  B --> MAC
-  MAC --> C["C result buffer int32"]
-  C --> BUS
+flowchart LR
+  subgraph Core["Register-controlled core"]
+    TOP["tinynpu_top"]
+    CTRL["CTRL and STATUS"]
+    A["A scratchpad int8"]
+    B["B scratchpad int8"]
+    MAC["MAC array variants"]
+    C["C result buffer int32"]
+    TOP --> CTRL
+    TOP --> A
+    TOP --> B
+    A --> MAC
+    B --> MAC
+    MAC --> C
+    C --> TOP
+  end
 
-  APB["APB wrapper"] --> TOP
-  AXIL["AXI Lite wrapper"] --> DESC["DMA descriptor wrapper"]
-  DESC --> APB
-  AXIRD["AXI read DMA wrapper"] --> DESC
-  AXIDMA["full single beat AXI DMA wrapper"] --> DESC
+  subgraph Wrappers["Supported memory-mapped wrapper paths"]
+    SW["software or testbench register access"] --> BUS["simple register bus"]
+    APB["APB wrapper"] --> APBBUS["register bus adapter"]
+    AXIL["AXI Lite wrapper"] --> AXICTL["control and descriptor path"]
+    DESC["DMA descriptor wrapper"] --> DMABUS["register bus plus memory moves"]
+    AXIRD["AXI read DMA wrapper"] --> AXIRDIO["AXI read A and B plus C output"]
+    AXIDMA["full single beat AXI DMA wrapper"] --> AXIDMAIO["AXI read A and B plus AXI write C"]
+  end
 
-  SIN["AXI Stream input"] --> TILE["tile stream core"]
-  TILE --> SOUT["AXI Stream output"]
-  SIN --> SNPU["double buffered stream NPU"]
-  SNPU --> SOUT
+  BUS --> TOP
+  APBBUS --> TOP
+  AXICTL --> TOP
+  DMABUS --> TOP
+  AXIRDIO --> TOP
+  AXIDMAIO --> TOP
+
+  subgraph Streaming["AXI4-Stream paths"]
+    SIN0["AXI Stream input"] --> TILE["tile stream core"]
+    TILE --> SOUT0["AXI Stream output"]
+    SIN1["AXI Stream input"] --> SNPU["double buffered stream NPU"]
+    SNPU --> SOUT1["AXI Stream output"]
+  end
 ```
 
 ```mermaid
