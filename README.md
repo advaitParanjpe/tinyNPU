@@ -65,6 +65,12 @@ flowchart LR
     SIN1["AXI Stream input"] --> SNPU["double buffered stream NPU"]
     SNPU --> SOUT1["AXI Stream output"]
   end
+
+  classDef node fill:#1f1f1f,stroke:#aaaaaa,color:#eeeeee;
+  class TOP,CTRL,A,B,MAC,C,WNOTE,SW,BUS,APB,APBBUS,AXIL,AXICTL,DESC,DMABUS,AXIRD,AXIRDIO,AXIDMA,AXIDMAIO,SIN0,TILE,SOUT0,SIN1,SNPU,SOUT1 node;
+  style Core fill:transparent,stroke:#888888,stroke-dasharray:4 4,color:#eeeeee;
+  style Wrappers fill:transparent,stroke:#888888,stroke-dasharray:4 4,color:#eeeeee;
+  style Streaming fill:transparent,stroke:#888888,stroke-dasharray:4 4,color:#eeeeee;
 ```
 
 ```mermaid
