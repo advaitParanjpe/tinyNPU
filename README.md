@@ -17,8 +17,8 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - DMA done IRQ support on the descriptor wrapper and AXI4-Lite wrapper.
 - DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, an unpipelined four-lane row MAC FSM.
-- Selectable `serial`, `row4`, `row4_pipe`, and `full16` MAC variants for
-  area/latency/timing-oriented comparison.
+- Selectable `serial`, `row4`, `row4_pipe`, `row4_pipe2`, and `full16` MAC
+  variants for area/latency/timing-oriented comparison.
 - Directed, edge-case, bus protocol, control/status, and deterministic random golden-model verification.
 - Lightweight simulation assertions/checkers and bounded-latency checking.
 - Coverage-style scenario reporting for tested functional/control/bus cases.
@@ -69,6 +69,8 @@ make synth-serial
 make results-serial
 make sim-row4-pipe
 make synth-row4-pipe
+make sim-row4-pipe2
+make synth-row4-pipe2
 make sim-full16
 make synth-full16
 make results-full16
@@ -88,12 +90,12 @@ artifacts for `row4`, `serial`, and `full16`.
 
 The completed Dockerized OpenLane 2 run for the row4 `tinynpu_top` core is
 summarized in [docs/asic_flow_results.md](docs/asic_flow_results.md). The
-captured baseline run produced final GDS/DEF/netlist artifacts and reported
-clean DRC/LVS, while timing, electrical, and antenna closure issues remain. The
-same page also records a controlled clock sweep; 50 MHz closes setup for the
-current RTL in this flow, but no swept target is signoff clean. This is a local
-ASIC-style RTL-to-GDS flow result, not a shuttle/fab submission or signoff-clean
-claim.
+captured runs produced final GDS/DEF/netlist artifacts and reported clean
+DRC/LVS for the documented row4, row4_pipe, and row4_pipe2 targets, while
+timing and electrical closure issues remain. The same page also records a
+controlled clock sweep; 50 MHz closes setup for the original row4 RTL in this
+flow, but no swept target is signoff clean. This is a local ASIC-style
+RTL-to-GDS flow result, not a shuttle/fab submission or signoff-clean claim.
 
 ## Architecture
 
@@ -106,7 +108,7 @@ tinynpu_top
   |-- CTRL/STATUS
   |-- A/B int8 scratchpads
   |-- MAC variant wrapper
-  |     |-- serial / row4 / full16
+  |     |-- serial / row4 / row4_pipe / row4_pipe2 / full16
   |-- C int32 result buffer
 ```
 
@@ -279,7 +281,8 @@ The current self-checking Icarus simulation covers:
 `make sim` enables the checkers by default. The default `row4` regression
 currently observes a 26-cycle accepted-start-to-done latency. The `serial`
 baseline observes 66 cycles. The timing-oriented `row4_pipe` variant observes
-42 cycles. The `full16` variant observes 8 cycles.
+42 cycles, and `row4_pipe2` observes 58 cycles. The `full16` variant observes 8
+cycles.
 
 The simulation checkers cover:
 
@@ -303,6 +306,7 @@ make synth-axi-read-dma
 make synth-axi-dma
 make synth-serial
 make synth-row4-pipe
+make synth-row4-pipe2
 make synth-full16
 ```
 
@@ -316,6 +320,7 @@ Variant-specific outputs are written under:
 - `build/synth/axi_dma/`
 - `build/synth/serial/`
 - `build/synth/row4_pipe/`
+- `build/synth/row4_pipe2/`
 - `build/synth/full16/`
 
 This is a generic Yosys synthesis check, not a technology-mapped PPA flow. It

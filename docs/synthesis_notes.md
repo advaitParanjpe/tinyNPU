@@ -3,9 +3,10 @@
 ## Flow Overview
 
 `make synth` runs a basic Yosys synthesis flow for `tinynpu_top` using the
-default `row4` MAC variant. `make synth-serial`, `make synth-row4-pipe`, and
-`make synth-full16` run the same flow for the other MAC variants. `make
-synth-apb` synthesizes the optional APB wrapper around the default `row4` core.
+default `row4` MAC variant. `make synth-serial`, `make synth-row4-pipe`, `make
+synth-row4-pipe2`, and `make synth-full16` run the same flow for the other MAC
+variants. `make synth-apb` synthesizes the optional APB wrapper around the
+default `row4` core.
 
 `make synth-dma-desc` synthesizes the optional DMA descriptor wrapper around the
 APB core wrapper. This includes synthesizable descriptor registers, a DMA FSM,
@@ -46,7 +47,8 @@ Variant-specific outputs are written under `build/synth/<variant>/`:
 - `yosys.log`
 - `stat.txt`
 - `tinynpu_top_synth.v` for core MAC variants, including `build/synth/row4/`,
-  `build/synth/row4_pipe/`, `build/synth/serial/`, and `build/synth/full16/`
+  `build/synth/row4_pipe/`, `build/synth/row4_pipe2/`,
+  `build/synth/serial/`, and `build/synth/full16/`
 - `tinynpu_apb_wrapper_synth.v` for `build/synth/apb/`
 - `tinynpu_dma_descriptor_wrapper_synth.v` for `build/synth/dma_desc/`
 - `tinynpu_axi_lite_wrapper_synth.v` for `build/synth/axi_lite/`

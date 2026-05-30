@@ -23,6 +23,7 @@ Coverage summaries are written to:
 
 - `build/sim/row4/coverage_summary.json`
 - `build/sim/row4_pipe/coverage_summary.json`
+- `build/sim/row4_pipe2/coverage_summary.json`
 - `build/sim/serial/coverage_summary.json`
 - `build/sim/full16/coverage_summary.json`
 
@@ -42,8 +43,8 @@ path, number of passed coverage categories, and known gap count.
 - Checker suite: busy/done mutex, start ignored while busy, bounded done after
   start, reset clears status, C stable while done is sticky.
 - Variant regression: `serial`, `row4`, and `full16` through `make compare`;
-  `row4_pipe` has a focused `make sim-row4-pipe` path for timing-oriented
-  ASIC experiments.
+  `row4_pipe` and `row4_pipe2` have focused `make sim-row4-pipe` and `make
+  sim-row4-pipe2` paths for timing-oriented ASIC experiments.
 - APB DMA-style descriptor-flow smoke tests through `make sim-apb-dma`.
 - Synthesizable DMA descriptor-wrapper smoke tests through `make sim-dma-desc`,
   including `desc_fsm_start_done`, `desc_dma_identity`,

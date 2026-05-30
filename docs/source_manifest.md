@@ -10,6 +10,8 @@
 - `rtl/tinynpu_mac_row4.sv`: default four-lane row MAC datapath.
 - `rtl/tinynpu_mac_row4_pipe.sv`: timing-oriented four-lane row MAC datapath
   with a product register stage before accumulator update.
+- `rtl/tinynpu_mac_row4_pipe2.sv`: second timing-oriented four-lane row MAC
+  datapath with operand-select, product, and accumulator pipeline stages.
 - `rtl/tinynpu_mac_full16.sv`: full-parallel 16-output datapath.
 - `rtl/tinynpu_scratchpad_i8.sv`: 16-entry int8 scratchpad for A/B storage.
 - `rtl/tinynpu_result_buffer_i32.sv`: 16-entry int32 C result buffer.
@@ -61,8 +63,8 @@
 ## Scripts
 
 - `scripts/check_repo.py`: repository static checks.
-- `scripts/check_asic_flow.py`: ASIC-flow scaffold checks for the row4
-  `tinynpu_top` OpenLane setup.
+- `scripts/check_asic_flow.py`: ASIC-flow scaffold checks for the row4,
+  row4_pipe, and row4_pipe2 `tinynpu_top` OpenLane setups.
 - `scripts/synth_yosys.sh`: Yosys synthesis entry point.
 - `scripts/synth_yosys.ys`: Yosys synthesis script template.
 - `scripts/parse_yosys_stats.py`: synthesis report parser.
@@ -74,6 +76,10 @@
   constraints for the row4 `tinynpu_top` implementation target.
 - `openlane/tinynpu_top/config.json`: initial OpenLane-style configuration for
   the row4 `tinynpu_top` implementation target.
+- `openlane/tinynpu_top_row4_pipe/config.json`: separate OpenLane
+  configuration for the timing-oriented row4_pipe target.
+- `openlane/tinynpu_top_row4_pipe2/config.json`: separate OpenLane
+  configuration for the second timing-oriented row4_pipe2 target.
 
 ## Test Vectors
 

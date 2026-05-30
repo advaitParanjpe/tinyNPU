@@ -10,6 +10,7 @@ Files:
 - `rtl/tinynpu_mac_serial.sv`
 - `rtl/tinynpu_mac_row4.sv`
 - `rtl/tinynpu_mac_row4_pipe.sv`
+- `rtl/tinynpu_mac_row4_pipe2.sv`
 - `rtl/tinynpu_mac_full16.sv`
 - `rtl/tinynpu_mac_array.sv`
 
@@ -26,7 +27,7 @@ Targets:
 - Test all variants: `make compare`
 - Synthesize default: `make synth`
 - Synthesize other variants: `make synth-serial`, `make synth-row4-pipe`,
-  `make synth-full16`
+  `make synth-row4-pipe2`, `make synth-full16`
 
 ## Layer 1: Core Accelerator
 

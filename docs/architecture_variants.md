@@ -64,6 +64,29 @@ make sim-row4-pipe
 make synth-row4-pipe
 ```
 
+## 4-Lane Row MAC Pipeline 2
+
+- Timing-oriented ASIC variant selected with `TINYNPU_MAC_ROW4_PIPE2`.
+- Keeps the same programmer-visible top-level behavior and C result values as
+  the default row4 and row4_pipe paths.
+- Adds an operand-select pipeline stage before product generation: selected A,
+  selected B lanes, row/k metadata, and control-valid state are registered
+  before the signed int8 multipliers.
+- The following stages register products and then update the int32
+  accumulators, targeting the row4_pipe critical path from `k_q`/state-dependent
+  control and operand select into the product registers.
+- Expected tradeoff: higher operation latency and additional registers in
+  exchange for a shorter control-select-to-product-register path. Timing closure
+  is not claimed until OpenLane reports setup, slew, max-cap, antenna, DRC, and
+  LVS all clean.
+
+Run:
+
+```sh
+make sim-row4-pipe2
+make synth-row4-pipe2
+```
+
 ## 16-Lane Full Parallel MAC
 
 - Computes all 16 C outputs in parallel across k.
