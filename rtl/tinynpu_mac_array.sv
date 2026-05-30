@@ -1,16 +1,16 @@
 `timescale 1ns/1ps
 
-import tinynpu_pkg::*;
+`include "tinynpu_defs.svh"
 
 module tinynpu_mac_array (
   input  logic                  clk,
   input  logic                  rst_n,
   input  logic                  start,
-  input  logic [A_FLAT_W-1:0]   a_flat,
-  input  logic [B_FLAT_W-1:0]   b_flat,
+  input  logic [`A_FLAT_W-1:0]   a_flat,
+  input  logic [`B_FLAT_W-1:0]   b_flat,
   output logic                  busy,
   output logic                  done,
-  output logic [C_FLAT_W-1:0]   c_flat
+  output logic [`C_FLAT_W-1:0]   c_flat
 );
 
 `ifdef TINYNPU_MAC_SERIAL

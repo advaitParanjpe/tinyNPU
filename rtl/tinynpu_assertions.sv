@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-import tinynpu_pkg::*;
+`include "tinynpu_defs.svh"
 
 module tinynpu_assertions (
   input logic                clk,
@@ -9,7 +9,7 @@ module tinynpu_assertions (
   input logic                done,
   input logic                start_accepted,
   input logic                start_while_busy,
-  input logic [C_FLAT_W-1:0] c_flat
+  input logic [`C_FLAT_W-1:0] c_flat
 );
 
 `ifdef TINYNPU_SIM_ASSERT
@@ -18,7 +18,7 @@ module tinynpu_assertions (
   logic operation_pending;
   int   operation_cycles;
   logic prev_done;
-  logic [C_FLAT_W-1:0] prev_c_flat;
+  logic [`C_FLAT_W-1:0] prev_c_flat;
 
   always @(negedge rst_n) begin
     #1;

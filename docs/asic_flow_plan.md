@@ -46,18 +46,27 @@ Default MAC configuration:
 
 The row4 implementation source list is:
 
-1. `rtl/tinynpu_pkg.sv`
-2. `rtl/tinynpu_mac_serial.sv`
-3. `rtl/tinynpu_mac_row4.sv`
-4. `rtl/tinynpu_mac_full16.sv`
-5. `rtl/tinynpu_mac_array.sv`
-6. `rtl/tinynpu_scratchpad_i8.sv`
-7. `rtl/tinynpu_result_buffer_i32.sv`
-8. `rtl/tinynpu_top.sv`
+1. `rtl/tinynpu_mac_row4.sv`
+2. `rtl/tinynpu_mac_array.sv`
+3. `rtl/tinynpu_scratchpad_i8.sv`
+4. `rtl/tinynpu_result_buffer_i32.sv`
+5. `rtl/tinynpu_top.sv`
 
-`tinynpu_mac_serial.sv` and `tinynpu_mac_full16.sv` remain in the source list so
-the compile-time variant wrapper can elaborate cleanly, but the default branch
-instantiates `tinynpu_mac_row4`.
+These files include `rtl/tinynpu_defs.svh` for shared matrix and bus widths. The
+compatibility package `rtl/tinynpu_pkg.sv` is intentionally not in the OpenLane
+source list because the first Dockerized OpenLane 2 run used Yosys header
+generation with the Verilog-2005 frontend and failed on file-scope
+SystemVerilog package import syntax:
+
+```text
+rtl/tinynpu_mac_serial.sv:3: ERROR: syntax error, unexpected TOK_ID
+```
+
+Line 3 was `import tinynpu_pkg::*;`. OpenLane 2 documents `USE_SYNLIG` as a
+SystemVerilog-capable frontend option, but enabling it is not required for this
+row4 ASIC-style RTL-to-GDS bring-up. The less invasive fix is to avoid
+package/import syntax in the implementation source path and keep the constants
+behavior-equivalent through the shared include file.
 
 Simulation-only files are intentionally excluded:
 
@@ -124,13 +133,7 @@ Possible OpenLane invocation depends on the installed OpenLane version. Common
 forms are:
 
 ```sh
-openlane openlane/tinynpu_top/config.json
-```
-
-or:
-
-```sh
-flow.tcl -design openlane/tinynpu_top
+openlane --dockerized openlane/tinynpu_top/config.json
 ```
 
 Use the command required by the local OpenLane installation.
@@ -141,7 +144,8 @@ Already passing in this workspace:
 
 - `make check`
 - `make synth`
-- `python3 scripts/check_asic_flow.py`
+- `make asic-check`
+- `openlane --dockerized openlane/tinynpu_top/config.json`
 
 `make synth` confirms that the row4 `tinynpu_top` elaborates and synthesizes
 with the generic Yosys flow. Latest generic Yosys summary:
@@ -152,24 +156,52 @@ with the generic Yosys flow. Latest generic Yosys summary:
 - wires: 4,104
 - wire bits: 49,766
 
+Dockerized OpenLane run history:
+
+- `RUN_2026-05-30_00-23-50` reached Yosys JSON header generation and failed on
+  the file-scope `import tinynpu_pkg::*;` construct.
+- `RUN_2026-05-30_00-28-25` parsed and synthesized after the shared include
+  refactor, then failed post-PnR STA because the SDC used
+  `remove_from_collection`, which this OpenSTA path did not accept.
+- `RUN_2026-05-30_00-36-33` completed the Dockerized OpenLane flow after the
+  SDC was rewritten with an explicit input port collection and the same SDC was
+  wired as both `PNR_SDC_FILE` and `SIGNOFF_SDC_FILE`.
+
+Final metrics from `RUN_2026-05-30_00-36-33`:
+
+- Flow status: complete.
+- Routed DRC: 0 final detailed-route errors after repair iterations.
+- Magic DRC: 0.
+- KLayout DRC: 0.
+- LVS device differences: 0.
+- Power-grid violations: 0.
+- Antenna: 2 violating pins on 2 nets.
+- Worst setup slack across reported corners: -5.831 ns, with 319 setup
+  violations.
+- Hold WNS/TNS: 0 / 0.
+- Max slew violations: 3,003.
+- Max capacitance violations: 29.
+
 ## Current Blockers
 
-- OpenLane/OpenROAD is not available on the current PATH, so an RTL-to-GDS smoke
-  run has not been executed in this workspace.
+- The Dockerized OpenLane smoke flow completes, but physical closure is not
+  clean: antenna, setup, max slew, and max capacitance violations remain.
 - The SDC is a bring-up constraint file, not a final timing contract.
 - The flow still uses register-based scratchpads and result storage; no SRAM
   macro mapping has been introduced.
 - No pin order, PDN customization, macro placement, or IO timing budget has been
   finalized.
-- No technology-mapped timing, area, power, DRC, or LVS result exists yet.
+- The config still carries some deprecated OpenLane variable names that should
+  be cleaned up after the bring-up path stabilizes.
 
 ## Next Steps
 
-1. Install or activate OpenLane/OpenROAD plus a Sky130A PDK.
-2. Run the `tinynpu_top` OpenLane smoke flow.
-3. Capture key reports under `build/asic/` or a similarly ignored output tree.
-4. Record first-pass utilization, worst slack, routed status, DRC/LVS status,
-   and any unsupported RTL/tool issues.
-5. Tune die area, density, clock period, and IO constraints only after the first
-   report set exists.
-
+1. Fix the remaining antenna violations without changing RTL behavior.
+2. Decide whether the 100 MHz placeholder clock target is the right first
+   physical target, then tune clock period, die area, density, buffering, and IO
+   constraints against that target.
+3. Clean up deprecated OpenLane config variables.
+4. Capture stable report summaries under `build/asic/` or a similarly ignored
+   output tree once the flow settings stop changing.
+5. Revisit SRAM macro mapping, pin order, PDN customization, and IO budgets
+   before treating this as more than an ASIC-style RTL-to-GDS flow scaffold.

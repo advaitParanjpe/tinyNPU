@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-import tinynpu_pkg::*;
+`include "tinynpu_defs.svh"
 
 module tinynpu_top (
   input  logic        clk,
@@ -20,10 +20,10 @@ module tinynpu_top (
   localparam logic [7:0] ADDR_B_BASE = 8'h50;
   localparam logic [7:0] ADDR_C_BASE = 8'h90;
 
-  logic [A_FLAT_W-1:0] mac_a_flat;
-  logic [B_FLAT_W-1:0] mac_b_flat;
-  logic [C_FLAT_W-1:0] mac_c_flat;
-  logic [C_FLAT_W-1:0] c_flat;
+  logic [`A_FLAT_W-1:0] mac_a_flat;
+  logic [`B_FLAT_W-1:0] mac_b_flat;
+  logic [`C_FLAT_W-1:0] mac_c_flat;
+  logic [`C_FLAT_W-1:0] c_flat;
   logic                mac_start;
   logic                mac_busy;
   logic                mac_done;
@@ -35,9 +35,9 @@ module tinynpu_top (
   logic [3:0]          a_read_idx;
   logic [3:0]          b_read_idx;
   logic [3:0]          c_read_idx;
-  logic signed [DATA_W-1:0] a_read_data;
-  logic signed [DATA_W-1:0] b_read_data;
-  logic signed [ACC_W-1:0]  c_read_data;
+  logic signed [`DATA_W-1:0] a_read_data;
+  logic signed [`DATA_W-1:0] b_read_data;
+  logic signed [`ACC_W-1:0]  c_read_data;
 
 `ifdef TINYNPU_SIM_ASSERT
   logic                debug_start_accepted;
@@ -114,7 +114,7 @@ module tinynpu_top (
     .rst_n      (rst_n),
     .write_en   (a_write_en),
     .write_idx  (a_write_idx),
-    .write_data (bus_wdata[DATA_W-1:0]),
+    .write_data (bus_wdata[`DATA_W-1:0]),
     .read_idx   (a_read_idx),
     .read_data  (a_read_data),
     .flat_data  (mac_a_flat)
@@ -125,7 +125,7 @@ module tinynpu_top (
     .rst_n      (rst_n),
     .write_en   (b_write_en),
     .write_idx  (b_write_idx),
-    .write_data (bus_wdata[DATA_W-1:0]),
+    .write_data (bus_wdata[`DATA_W-1:0]),
     .read_idx   (b_read_idx),
     .read_data  (b_read_data),
     .flat_data  (mac_b_flat)

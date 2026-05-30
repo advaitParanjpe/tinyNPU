@@ -3,10 +3,7 @@
   "PDK": "sky130A",
   "STD_CELL_LIBRARY": "sky130_fd_sc_hd",
   "VERILOG_FILES": [
-    "dir::../../rtl/tinynpu_pkg.sv",
-    "dir::../../rtl/tinynpu_mac_serial.sv",
     "dir::../../rtl/tinynpu_mac_row4.sv",
-    "dir::../../rtl/tinynpu_mac_full16.sv",
     "dir::../../rtl/tinynpu_mac_array.sv",
     "dir::../../rtl/tinynpu_scratchpad_i8.sv",
     "dir::../../rtl/tinynpu_result_buffer_i32.sv",
@@ -25,6 +22,6 @@
   "SYNTH_DEFINES": "",
   "SYNTH_READ_BLACKBOX_LIB": true,
   "RUN_HEURISTIC_DIODE_INSERTION": true,
+  "PNR_SDC_FILE": "dir::../../constraints/tinynpu_top.sdc",
   "SIGNOFF_SDC_FILE": "dir::../../constraints/tinynpu_top.sdc"
 }
-

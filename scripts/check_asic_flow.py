@@ -9,6 +9,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top" / "config.json"
 SDC_PATH = REPO_ROOT / "constraints" / "tinynpu_top.sdc"
+EXPECTED_SOURCES = (
+    "rtl/tinynpu_mac_row4.sv",
+    "rtl/tinynpu_mac_array.sv",
+    "rtl/tinynpu_scratchpad_i8.sv",
+    "rtl/tinynpu_result_buffer_i32.sv",
+    "rtl/tinynpu_top.sv",
+)
 
 
 def fail(message):
@@ -39,6 +46,7 @@ def main():
     if config.get("SYNTH_DEFINES", ""):
         return fail("row4 is the default MAC; SYNTH_DEFINES should be empty")
 
+    configured_sources = []
     missing_sources = []
     for entry in config["VERILOG_FILES"]:
         if not isinstance(entry, str):
@@ -46,10 +54,14 @@ def main():
         if not entry.startswith("dir::"):
             return fail(f"source path should use dir:: prefix: {entry}")
         source_path = (CONFIG_PATH.parent / entry.removeprefix("dir::")).resolve()
+        configured_sources.append(str(source_path.relative_to(REPO_ROOT)))
         if not source_path.is_file():
             missing_sources.append(str(source_path.relative_to(REPO_ROOT)))
     if missing_sources:
         return fail("missing source files: " + ", ".join(missing_sources))
+
+    if configured_sources != list(EXPECTED_SOURCES):
+        return fail("unexpected ASIC source list: " + ", ".join(configured_sources))
 
     sdc_text = SDC_PATH.read_text(encoding="utf-8")
     for token in ("create_clock", "get_ports clk", "set_input_delay", "set_output_delay"):
@@ -66,4 +78,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
