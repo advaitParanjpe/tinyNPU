@@ -16,6 +16,8 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
   for A/B loads, and AXI writes for C stores.
 - Optional AXI4-Stream-style tile core for framed 4x4 A/B input tiles and
   streamed int32 C output tiles.
+- Optional double-buffered AXI4-Stream NPU prototype that overlaps tile loading,
+  row4_pipe2 compute, and C tile output where ping-pong buffers permit.
 - DMA done IRQ support on the descriptor wrapper and AXI4-Lite wrapper.
 - DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, an unpipelined four-lane row MAC FSM.
@@ -54,6 +56,7 @@ make check
 make golden
 make sim
 make sim-axis-stream
+make sim-axis-stream-npu
 make sim-apb
 make sim-apb-dma
 make sim-dma-desc
@@ -113,6 +116,20 @@ backpressure, but it does not accept another tile while busy and does not claim
 fully overlapped streaming throughput. See
 [docs/streaming_core.md](docs/streaming_core.md) and run `make sim-axis-stream`
 for the self-checking stream-core testbench.
+
+## Double-Buffered Streaming NPU Milestone
+
+`tinynpu_axis_stream_npu` is a separate double-buffered AXI4-Stream tinyNPU
+prototype. It keeps the same tile packet format as the tile core, but adds
+ping-pong A/B input buffers and ping-pong C output buffers around one
+row4_pipe2 compute engine. This lets input load, compute, and output streaming
+overlap across consecutive 4x4 tiles when buffers are available.
+
+The verified simulation reports 156 cycles single-tile latency and 64
+steady-state cycles per tile for back-to-back tiles in the current testbench.
+This is not a full production NPU or multi-engine streaming array. See
+[docs/streaming_npu.md](docs/streaming_npu.md) and run
+`make sim-axis-stream-npu`.
 
 ## Architecture
 

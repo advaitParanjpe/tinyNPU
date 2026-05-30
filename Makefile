@@ -1,4 +1,4 @@
-.PHONY: all help check asic-check precommit sim sim-axis-stream sim-apb sim-apb-dma sim-dma-desc sim-axi-lite sim-axi-read-dma sim-axi-dma sim-serial sim-row4-pipe sim-row4-pipe2 sim-row4-pipe2-dupa sim-row4-pipe3 sim-full16 golden vectors synth synth-apb synth-dma-desc synth-axi-lite synth-axi-read-dma synth-axi-dma synth-serial synth-row4-pipe synth-row4-pipe2 synth-row4-pipe2-dupa synth-row4-pipe3 synth-full16 results results-serial results-full16 compare clean
+.PHONY: all help check asic-check precommit sim sim-axis-stream sim-axis-stream-npu sim-apb sim-apb-dma sim-dma-desc sim-axi-lite sim-axi-read-dma sim-axi-dma sim-serial sim-row4-pipe sim-row4-pipe2 sim-row4-pipe2-dupa sim-row4-pipe3 sim-full16 golden vectors synth synth-apb synth-dma-desc synth-axi-lite synth-axi-read-dma synth-axi-dma synth-serial synth-row4-pipe synth-row4-pipe2 synth-row4-pipe2-dupa synth-row4-pipe3 synth-full16 results results-serial results-full16 compare clean
 
 all: vectors golden sim synth results
 
@@ -9,6 +9,7 @@ help:
 	@echo "  make golden         Print fixed Python golden-model vectors"
 	@echo "  make sim            Run default row4 simple-bus simulation"
 	@echo "  make sim-axis-stream Run AXI4-Stream tile-core simulation"
+	@echo "  make sim-axis-stream-npu Run double-buffered AXI4-Stream NPU simulation"
 	@echo "  make sim-row4-pipe  Run timing-oriented row4 pipeline simulation"
 	@echo "  make sim-row4-pipe2 Run second timing-oriented row4 pipeline simulation"
 	@echo "  make sim-row4-pipe2-dupa Run row4_pipe2 with lane-local selected-A simulation"
@@ -46,6 +47,9 @@ sim:
 
 sim-axis-stream:
 	python3 sim/run_axis_stream_sim.py
+
+sim-axis-stream-npu:
+	python3 sim/run_axis_stream_npu_sim.py
 
 sim-apb:
 	python3 sim/run_apb_sim.py
