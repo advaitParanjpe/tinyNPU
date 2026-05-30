@@ -27,6 +27,11 @@
   AXI4 read master for A/B loads and an abstract C write port.
 - `rtl/tinynpu_axi_dma_wrapper.sv`: AXI4-Lite controlled wrapper with AXI4 read
   master loads for A/B and AXI4 write master stores for C.
+- `rtl/tinynpu_axis_stream_tile_core.sv`: tile-at-a-time AXI4-Stream-style
+  interface for one 4x4 A/B input tile and one C output tile.
+- `rtl/tinynpu_axis_stream_npu.sv`: double-buffered AXI4-Stream prototype with
+  ping-pong A/B input buffers, one row4_pipe2 compute engine, ping-pong C output
+  buffers, and overlapped load/compute/output FSMs.
 
 ## Simulation-Only RTL/Checkers
 
@@ -47,6 +52,8 @@
 - `tb/tb_tinynpu_axi_read_dma_wrapper.sv`: AXI read-DMA wrapper regression.
 - `tb/tb_tinynpu_axi_dma_wrapper.sv`: full single-beat AXI DMA wrapper
   regression.
+- `tb/tb_tinynpu_axis_stream_tile_core.sv`: AXI4-Stream tile-core regression.
+- `tb/tb_tinynpu_axis_stream_npu.sv`: double-buffered streaming NPU regression.
 
 ## Models And Simulation Runners
 
@@ -59,12 +66,16 @@
 - `sim/run_axi_lite_sim.py`: AXI4-Lite control-wrapper simulation runner.
 - `sim/run_axi_read_dma_sim.py`: AXI read-DMA wrapper simulation runner.
 - `sim/run_axi_dma_sim.py`: full single-beat AXI DMA wrapper simulation runner.
+- `sim/run_axis_stream_sim.py`: AXI4-Stream tile-core simulation runner.
+- `sim/run_axis_stream_npu_sim.py`: double-buffered streaming NPU simulation
+  runner.
 
 ## Scripts
 
 - `scripts/check_repo.py`: repository static checks.
 - `scripts/check_asic_flow.py`: ASIC-flow scaffold checks for the row4,
-  row4_pipe, and row4_pipe2 `tinynpu_top` OpenLane setups.
+  row4_pipe, row4_pipe2, row4_pipe2_dupa, row4_pipe3, and selected lower-clock
+  row4_pipe2 `tinynpu_top` OpenLane setups.
 - `scripts/synth_yosys.sh`: Yosys synthesis entry point.
 - `scripts/synth_yosys.ys`: Yosys synthesis script template.
 - `scripts/parse_yosys_stats.py`: synthesis report parser.
@@ -80,6 +91,16 @@
   configuration for the timing-oriented row4_pipe target.
 - `openlane/tinynpu_top_row4_pipe2/config.json`: separate OpenLane
   configuration for the second timing-oriented row4_pipe2 target.
+- `openlane/tinynpu_top_row4_pipe2_dupa/config.json`: separate OpenLane
+  configuration for the row4_pipe2 lane-local selected-A experiment.
+- `openlane/tinynpu_top_row4_pipe3/config.json`: separate OpenLane
+  configuration for the deeper product-generation pipeline experiment.
+- `openlane/tinynpu_top_row4_pipe2_95mhz/config.json`: selected row4_pipe2
+  10.5 ns / 95.2 MHz target.
+- `openlane/tinynpu_top_row4_pipe2_93mhz/config.json`: selected row4_pipe2
+  10.75 ns / 93.0 MHz sweep target.
+- `openlane/tinynpu_top_row4_pipe2_91mhz/config.json`: selected row4_pipe2
+  11.0 ns / 90.9 MHz sweep target.
 
 ## Test Vectors
 
@@ -94,7 +115,12 @@
   notes.
 - `docs/asic_flow_plan.md`: ASIC-flow pivot plan, source list, constraints,
   OpenLane assumptions, and current blockers.
+- `docs/asic_flow_results.md`: captured ASIC-style OpenLane/SKY130 flow,
+  timing/PPA exploration, and limitations.
 - `docs/performance.md`: simulation performance reporting notes.
+- `docs/streaming_core.md`: tile-at-a-time AXI4-Stream interface notes.
+- `docs/streaming_npu.md`: double-buffered streaming NPU architecture,
+  verification, metrics, and limitations.
 
 ## Generated/Ignored Outputs
 

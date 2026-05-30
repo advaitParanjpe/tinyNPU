@@ -21,8 +21,9 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - DMA done IRQ support on the descriptor wrapper and AXI4-Lite wrapper.
 - DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, an unpipelined four-lane row MAC FSM.
-- Selectable `serial`, `row4`, `row4_pipe`, `row4_pipe2`, and `full16` MAC
-  variants for area/latency/timing-oriented comparison.
+- Selectable `serial`, `row4`, `row4_pipe`, `row4_pipe2`,
+  `row4_pipe2_dupa`, `row4_pipe3`, and `full16` MAC variants for
+  area/latency/timing-oriented comparison.
 - Directed, edge-case, bus protocol, control/status, and deterministic random golden-model verification.
 - Lightweight simulation assertions/checkers and bounded-latency checking.
 - Coverage-style scenario reporting for tested functional/control/bus cases.
@@ -35,9 +36,9 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - AXI DMA verification for AR/RVALID and AW/W/B backpressure, RRESP/BRESP
   errors, read/write timeouts, and done IRQ behavior.
 - Generic Yosys synthesis for all variants.
-- ASIC-style OpenLane 2/SKY130 flow results for the row4 `tinynpu_top` core,
-  including generated GDS/DEF/netlist artifacts and captured DRC/LVS/timing
-  metrics.
+- ASIC-style OpenLane 2/SKY130 flow results for the row4 `tinynpu_top` core and
+  row4_pipe timing variants, including generated GDS/DEF/netlist artifacts,
+  timing/PPA exploration, and honest DRC/LVS/electrical status.
 - Lightweight repository checks for commit readiness.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
 
@@ -77,6 +78,10 @@ make sim-row4-pipe
 make synth-row4-pipe
 make sim-row4-pipe2
 make synth-row4-pipe2
+make sim-row4-pipe2-dupa
+make synth-row4-pipe2-dupa
+make sim-row4-pipe3
+make synth-row4-pipe3
 make sim-full16
 make synth-full16
 make results-full16
@@ -96,12 +101,12 @@ artifacts for `row4`, `serial`, and `full16`.
 
 The completed Dockerized OpenLane 2 run for the row4 `tinynpu_top` core is
 summarized in [docs/asic_flow_results.md](docs/asic_flow_results.md). The
-captured runs produced final GDS/DEF/netlist artifacts and reported clean
-DRC/LVS for the documented row4, row4_pipe, and row4_pipe2 targets, while
-timing and electrical closure issues remain. The same page also records a
-controlled clock sweep; 50 MHz closes setup for the original row4 RTL in this
-flow, but no swept target is signoff clean. This is a local ASIC-style
-RTL-to-GDS flow result, not a shuttle/fab submission or signoff-clean claim.
+captured runs produced final GDS/DEF/netlist artifacts and timing/PPA data for
+row4 and pipelined row4 variants. The 100 MHz runs are aggressive exploration,
+not closed implementation targets; row4_pipe2 is the best balanced timing/PPA
+target currently documented, but no target is signoff-clean because timing
+and/or electrical/antenna issues remain. This is a local ASIC-style RTL-to-GDS
+flow result, not a shuttle/fab submission or signoff-clean claim.
 
 ## Streaming Tile Milestone
 
@@ -127,9 +132,10 @@ overlap across consecutive 4x4 tiles when buffers are available.
 
 The verified simulation reports 156 cycles single-tile latency and 64
 steady-state cycles per tile for back-to-back tiles in the current testbench.
-This is not a full production NPU or multi-engine streaming array. See
-[docs/streaming_npu.md](docs/streaming_npu.md) and run
-`make sim-axis-stream-npu`.
+Throughput estimates in [docs/streaming_npu.md](docs/streaming_npu.md) are
+frequency-dependent arithmetic estimates from simulation cycle counts. This is
+not a full production NPU, multi-engine streaming array, CDC/multi-clock design,
+or ASIC-timing-optimized implementation. Run `make sim-axis-stream-npu`.
 
 ## Architecture
 
@@ -142,7 +148,7 @@ tinynpu_top
   |-- CTRL/STATUS
   |-- A/B int8 scratchpads
   |-- MAC variant wrapper
-  |     |-- serial / row4 / row4_pipe / row4_pipe2 / full16
+  |     |-- serial / row4 / row4_pipe / row4_pipe2 / row4_pipe2_dupa / row4_pipe3 / full16
   |-- C int32 result buffer
 ```
 
@@ -224,6 +230,10 @@ models:
 - `tinynpu_axi_lite_wrapper` is a synthesizable AXI4-Lite control wrapper around the DMA descriptor wrapper.
 - `tinynpu_axi_read_dma_wrapper` is a synthesizable AXI4-Lite controlled wrapper with an AXI read master for A/B loads and an abstract C write port.
 - `tinynpu_axi_dma_wrapper` is a synthesizable full single-beat AXI DMA wrapper with AXI reads for A/B and AXI writes for C.
+- `tinynpu_axis_stream_tile_core` is a synthesizable tile-at-a-time
+  AXI4-Stream-style interface.
+- `tinynpu_axis_stream_npu` is a synthesizable double-buffered AXI4-Stream
+  prototype with overlapped load/compute/output across tiles.
 - `tb/tb_tinynpu_apb_dma_model.sv` is a testbench-only DMA-style model.
 
 See `docs/design_layers.md` and `docs/source_manifest.md` for the full layer and
