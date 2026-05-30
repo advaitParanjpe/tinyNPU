@@ -43,9 +43,10 @@ flowchart LR
   end
 
   subgraph Wrappers["Supported memory-mapped wrapper paths"]
+    WNOTE["alternative integration paths"]
     SW["software or testbench register access"] --> BUS["simple register bus"]
-    APB["APB wrapper"] --> APBBUS["register bus adapter"]
-    AXIL["AXI Lite wrapper"] --> AXICTL["control and descriptor path"]
+    APB["APB wrapper"] --> APBBUS["APB-to-register adapter"]
+    AXIL["AXI Lite wrapper"] --> AXICTL["AXI-Lite control/descriptor path"]
     DESC["DMA descriptor wrapper"] --> DMABUS["register bus plus memory moves"]
     AXIRD["AXI read DMA wrapper"] --> AXIRDIO["AXI read A and B plus C output"]
     AXIDMA["full single beat AXI DMA wrapper"] --> AXIDMAIO["AXI read A and B plus AXI write C"]
