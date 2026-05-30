@@ -87,7 +87,8 @@ remain stable while `m_axis_tvalid` is high and `m_axis_tready` is low.
 
 ## Timing And Throughput
 
-The current self-checking simulation reports:
+The current self-checking simulation reports the following metrics for the
+double-buffered AXI4-Stream prototype:
 
 | Metric | Value |
 | --- | ---: |
@@ -101,6 +102,40 @@ testbench driver overhead. The design has one compute engine, so steady-state
 throughput is still compute-limited by the row4_pipe2 MAC plus output scheduling
 overhead. This is an overlapped tile pipeline, not a fully parallel multi-MAC
 streaming array.
+
+The intended overlap looks like this for consecutive tiles:
+
+```text
+Time/cycles  --->
+
+Tile 0       LOAD A/B  | COMPUTE | OUTPUT C
+Tile 1                 LOAD A/B  | COMPUTE | OUTPUT C
+Tile 2                           LOAD A/B  | COMPUTE | OUTPUT C
+Tile 3                                     LOAD A/B  | COMPUTE | OUTPUT C
+
+Stages      input buffer fill overlaps previous compute/output when an input
+            buffer is free; compute overlaps previous output when a C buffer is
+            free; output can stall independently through m_axis_tready.
+```
+
+For a 4x4 matrix multiply, each output tile represents 64 signed int8 MACs
+(`4 x 4 x 4`). Using the measured steady-state result:
+
+```text
+tiles/s = f_clk / steady_state_cycles_per_tile
+MAC/s   = tiles/s * 64
+```
+
+Frequency-dependent estimates:
+
+| Clock | Steady-state cycles/tile | Estimated tiles/s | Estimated MAC/s |
+| ---: | ---: | ---: | ---: |
+| 90 MHz | 64 | 1.40625 M tiles/s | 90.0 M MAC/s |
+| 100 MHz | 64 | 1.5625 M tiles/s | 100.0 M MAC/s |
+
+These are arithmetic estimates from simulation-cycle counts. They are not an
+ASIC timing-closure claim; this streaming NPU path has not yet been optimized
+for ASIC timing or added to the OpenLane implementation targets.
 
 ## Verification
 
@@ -121,6 +156,7 @@ streaming array.
 ## Limitations
 
 - Fixed 4x4 tile shape.
+- Single-clock RTL only; there is no CDC or multi-clock integration yet.
 - One row4_pipe2 MAC engine, so compute is not multi-tile parallel.
 - Only two input buffers and two output buffers.
 - No packet IDs or metadata, so outputs are emitted in compute/output buffer
@@ -128,6 +164,7 @@ streaming array.
 - No AXI4 sidebands beyond `tvalid`, `tready`, `tdata`, and `tlast`.
 - This module has simulation coverage only and is not part of the OpenLane ASIC
   targets.
+- Not a production NPU and not yet fully optimized for ASIC timing.
 
 ## Future Work
 
