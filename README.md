@@ -30,6 +30,9 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
 - AXI DMA verification for AR/RVALID and AW/W/B backpressure, RRESP/BRESP
   errors, read/write timeouts, and done IRQ behavior.
 - Generic Yosys synthesis for all variants.
+- ASIC-style OpenLane 2/SKY130 flow results for the row4 `tinynpu_top` core,
+  including generated GDS/DEF/netlist artifacts and captured DRC/LVS/timing
+  metrics.
 - Lightweight repository checks for commit readiness.
 - `make compare` runs simulation, synthesis, and result capture for all variants.
 
@@ -77,6 +80,15 @@ The simulation builds under `build/` and writes a VCD waveform to
 and test count from `sim/run_sim.py`. It writes both `sim_summary.json` and
 `coverage_summary.json` for the selected variant. `make compare` produces these
 artifacts for `row4`, `serial`, and `full16`.
+
+## ASIC-Style Flow Results
+
+The completed Dockerized OpenLane 2 run for the row4 `tinynpu_top` core is
+summarized in [docs/asic_flow_results.md](docs/asic_flow_results.md). The
+captured run produced final GDS/DEF/netlist artifacts and reported clean
+DRC/LVS, while timing, electrical, and antenna closure issues remain. This is a
+local ASIC-style RTL-to-GDS flow result, not a shuttle/fab submission or
+signoff-clean claim.
 
 ## Architecture
 
