@@ -63,12 +63,16 @@ accept a new tile while busy. Output backpressure is handled by holding
 `m_axis_tvalid`, `m_axis_tdata`, and `m_axis_tlast` stable until
 `m_axis_tready` accepts the beat.
 
+Asserting reset clears any partially loaded input frame, in-flight compute, or
+partially drained output frame. After reset is released, the core returns to
+`S_LOAD_A` and expects a fresh input frame from `A[0]`.
+
 ## Framing Errors
 
 `frame_error` is set if `s_axis_tlast` arrives before `B[15]`, or if `B[15]` is
 accepted without `s_axis_tlast`. The bad frame is discarded and no output frame
 is emitted. The flag remains asserted until the first beat of the next input
-frame is accepted.
+frame is accepted; a correctly framed later tile can then complete normally.
 
 ## Current Limitations
 

@@ -183,16 +183,32 @@ module tb_tinynpu_axis_stream_tile_core;
       local_failures = 0;
       for (i = 0; i < `MATRIX_ELEMS; i = i + 1) begin
         timeout = 0;
-        if (add_output_backpressure && ((i % 4) == 1)) begin
+        if (add_output_backpressure && (((i % 4) == 1) || (i == `MATRIX_ELEMS-1))) begin
+          logic [31:0] held_data;
+          logic held_last;
           @(negedge clk);
           m_axis_tready <= 1'b0;
-          repeat (1) @(posedge clk);
-          if (m_axis_tvalid && s_axis_tready) begin
+          @(posedge clk);
+          while (!m_axis_tvalid && timeout < MAX_WAIT_CYCLES) begin
+            timeout = timeout + 1;
+            @(posedge clk);
+          end
+          #1;
+          held_data = m_axis_tdata;
+          held_last = m_axis_tlast;
+          if (s_axis_tready) begin
             $display("FAIL %s: input ready asserted while output was backpressured", test_name);
             failures = failures + 1;
             local_failures = local_failures + 1;
           end
           repeat (3) @(posedge clk);
+          #1;
+          if ((m_axis_tvalid !== 1'b1) || (m_axis_tdata !== held_data) || (m_axis_tlast !== held_last)) begin
+            $display("FAIL %s: output beat changed while backpressured at index %0d", test_name, i);
+            failures = failures + 1;
+            local_failures = local_failures + 1;
+          end
+          timeout = 0;
         end
 
         @(posedge clk);
@@ -324,6 +340,118 @@ module tb_tinynpu_axis_stream_tile_core;
         tests_passed = tests_passed + 1;
         $display("PASS missing_tlast_error");
       end
+
+      make_identity(a_flat);
+      b_flat = '0;
+      for (i = 0; i < `MATRIX_ELEMS; i = i + 1) begin
+        set_i8(b_flat, i, i - 4);
+      end
+      run_tile_test("malformed_recovery", a_flat, b_flat, 1'b0, 1'b0);
+    end
+  endtask
+
+  task automatic test_reset_during_input;
+    logic [`A_FLAT_W-1:0] a_flat;
+    logic [`B_FLAT_W-1:0] b_flat;
+    int i;
+    begin
+      for (i = 0; i < 5; i = i + 1) begin
+        send_beat(i[7:0], 1'b0, 0);
+      end
+
+      @(negedge clk);
+      rst_n <= 1'b0;
+      s_axis_tvalid <= 1'b0;
+      s_axis_tlast <= 1'b0;
+      m_axis_tready <= 1'b0;
+      repeat (3) @(posedge clk);
+      if ((m_axis_tvalid !== 1'b0) || (busy !== 1'b0) || (done !== 1'b0) || (frame_error !== 1'b0)) begin
+        $display("FAIL reset_during_input: reset did not clear stream state");
+        failures = failures + 1;
+      end else begin
+        tests_passed = tests_passed + 1;
+        $display("PASS reset_during_input");
+      end
+      rst_n <= 1'b1;
+      repeat (2) @(posedge clk);
+
+      make_identity(a_flat);
+      b_flat = '0;
+      for (i = 0; i < `MATRIX_ELEMS; i = i + 1) begin
+        set_i8(b_flat, i, 2 - i);
+      end
+      run_tile_test("reset_input_recovery", a_flat, b_flat, 1'b0, 1'b0);
+    end
+  endtask
+
+  task automatic test_reset_during_output;
+    logic [`A_FLAT_W-1:0] a_flat;
+    logic [`B_FLAT_W-1:0] b_flat;
+    int i;
+    begin
+      make_identity(a_flat);
+      b_flat = '0;
+      for (i = 0; i < `MATRIX_ELEMS; i = i + 1) begin
+        set_i8(b_flat, i, i + 1);
+      end
+      send_tile(a_flat, b_flat, 1'b0);
+
+      m_axis_tready <= 1'b0;
+      while (!m_axis_tvalid) begin
+        @(posedge clk);
+      end
+      @(negedge clk);
+      rst_n <= 1'b0;
+      repeat (3) @(posedge clk);
+      if ((m_axis_tvalid !== 1'b0) || (busy !== 1'b0) || (done !== 1'b0) || (frame_error !== 1'b0)) begin
+        $display("FAIL reset_during_output: reset did not clear stream state");
+        failures = failures + 1;
+      end else begin
+        tests_passed = tests_passed + 1;
+        $display("PASS reset_during_output");
+      end
+      rst_n <= 1'b1;
+      repeat (2) @(posedge clk);
+
+      make_identity(a_flat);
+      b_flat = '0;
+      for (i = 0; i < `MATRIX_ELEMS; i = i + 1) begin
+        set_i8(b_flat, i, i - 2);
+      end
+      run_tile_test("reset_output_recovery", a_flat, b_flat, 1'b0, 1'b0);
+    end
+  endtask
+
+  task automatic test_input_blocked_while_busy;
+    logic [`A_FLAT_W-1:0] a_flat;
+    logic [`B_FLAT_W-1:0] b_flat;
+    logic [`C_FLAT_W-1:0] expected;
+    begin
+      make_identity(a_flat);
+      b_flat = '0;
+      for (int i = 0; i < `MATRIX_ELEMS; i = i + 1) begin
+        set_i8(b_flat, i, i - 6);
+      end
+      compute_expected(a_flat, b_flat, expected);
+      send_tile(a_flat, b_flat, 1'b0);
+
+      @(negedge clk);
+      s_axis_tvalid <= 1'b1;
+      s_axis_tdata <= 8'h55;
+      s_axis_tlast <= 1'b0;
+      repeat (4) begin
+        @(posedge clk);
+        if (s_axis_tready !== 1'b0) begin
+          $display("FAIL input_blocked_while_busy: tready asserted while tile was busy");
+          failures = failures + 1;
+        end
+      end
+      @(negedge clk);
+      s_axis_tvalid <= 1'b0;
+      s_axis_tdata <= '0;
+      s_axis_tlast <= 1'b0;
+
+      receive_and_check("input_blocked_while_busy", expected, 1'b0);
     end
   endtask
 
@@ -357,6 +485,25 @@ module tb_tinynpu_axis_stream_tile_core;
     make_random(b_flat);
     run_tile_test("random_tile", a_flat, b_flat, 1'b1, 1'b1);
 
+    for (i = 0; i < `MATRIX_ELEMS; i = i + 1) begin
+      case (i % 4)
+        0: set_i8(a_flat, i, -128);
+        1: set_i8(a_flat, i, 127);
+        2: set_i8(a_flat, i, -1);
+        default: set_i8(a_flat, i, 1);
+      endcase
+      case (i % 4)
+        0: set_i8(b_flat, i, 127);
+        1: set_i8(b_flat, i, -128);
+        2: set_i8(b_flat, i, 1);
+        default: set_i8(b_flat, i, -1);
+      endcase
+    end
+    run_tile_test("signed_edge_values", a_flat, b_flat, 1'b0, 1'b1);
+
+    test_input_blocked_while_busy();
+    test_reset_during_input();
+    test_reset_during_output();
     test_framing_error();
 
     if (failures == 0) begin
