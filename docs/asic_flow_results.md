@@ -81,6 +81,32 @@ max-cap violation counts relative to the row4 baseline in this flow. It also
 reports clean antenna, DRC, and LVS. It still has setup, max-slew, and max-cap
 violations, so it is not timing closed or signoff clean.
 
+## Row4 Pipe Physical-Tuning Experiment
+
+A controlled 10 ns physical-tuning experiment was run for the separate
+row4_pipe OpenLane target only. RTL, wrappers, the baseline row4 target, and the
+10 ns SDC target were not changed. The tested low-risk knobs were placement
+density, post-global-route design repair/timing resizer enablement, tighter
+slew/cap repair percentages, and higher setup-resizer buffer limits.
+
+| Variant | Run directory | Config disposition | Setup WNS/TNS (ns) | Setup violations | Slew violations | Max-cap violations | Antenna violations | DRC/LVS | Utilization | Std-cell area (um^2) | Power (W) | Status |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- |
+| row4_pipe baseline | `openlane/tinynpu_top_row4_pipe/runs/RUN_2026-05-30_01-55-41` | Retained | -1.901 / -45.687 | 178 | 2,882 | 21 | 0 | Clean / clean | 18.99% | 116,558 | 0.02282 | Not clean |
+| row4_pipe physical tune 1 | `openlane/tinynpu_top_row4_pipe/runs/row4_pipe_phys_tune_1` | Discarded | -1.894 / -41.871 | 121 | 2,295 | 10 | 1 | Clean / clean | 19.50% | 119,655 | 0.02389 | Not clean; antenna regressed |
+
+The physical-tuning run reduced TNS and the setup/slew/max-cap violation counts,
+but WNS improved by only 0.007 ns and final antenna regressed from clean to one
+pin/net violation. Because the experiment did not materially improve WNS and did
+not preserve antenna cleanliness, the checked-in row4_pipe config was restored to
+the baseline settings.
+
+The next lowest-risk timing step is an RTL pipeline cut around the remaining
+critical region: register the `k_q`/state-dependent operand-select outputs
+before product generation, then perform signed int8 multiplication/product
+registration in the following cycle. That targets the observed
+control-select-to-product-register path directly; further OpenLane-only tuning
+is unlikely to recover the remaining roughly 1.9 ns WNS by itself.
+
 ## Clock Sweep
 
 This controlled sweep estimates the clock period the current row4 RTL can
