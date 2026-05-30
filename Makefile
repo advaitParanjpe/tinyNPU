@@ -1,4 +1,4 @@
-.PHONY: all help check asic-check precommit sim sim-apb sim-apb-dma sim-dma-desc sim-axi-lite sim-axi-read-dma sim-axi-dma sim-serial sim-row4-pipe sim-row4-pipe2 sim-full16 golden vectors synth synth-apb synth-dma-desc synth-axi-lite synth-axi-read-dma synth-axi-dma synth-serial synth-row4-pipe synth-row4-pipe2 synth-full16 results results-serial results-full16 compare clean
+.PHONY: all help check asic-check precommit sim sim-apb sim-apb-dma sim-dma-desc sim-axi-lite sim-axi-read-dma sim-axi-dma sim-serial sim-row4-pipe sim-row4-pipe2 sim-row4-pipe3 sim-full16 golden vectors synth synth-apb synth-dma-desc synth-axi-lite synth-axi-read-dma synth-axi-dma synth-serial synth-row4-pipe synth-row4-pipe2 synth-row4-pipe3 synth-full16 results results-serial results-full16 compare clean
 
 all: vectors golden sim synth results
 
@@ -10,6 +10,7 @@ help:
 	@echo "  make sim            Run default row4 simple-bus simulation"
 	@echo "  make sim-row4-pipe  Run timing-oriented row4 pipeline simulation"
 	@echo "  make sim-row4-pipe2 Run second timing-oriented row4 pipeline simulation"
+	@echo "  make sim-row4-pipe3 Run third timing-oriented row4 pipeline simulation"
 	@echo "  make sim-apb        Run APB wrapper simulation"
 	@echo "  make sim-apb-dma    Run testbench-only DMA-style APB model simulation"
 	@echo "  make sim-dma-desc   Run synthesizable DMA descriptor-wrapper simulation"
@@ -19,6 +20,7 @@ help:
 	@echo "  make synth          Synthesize default row4 core with Yosys"
 	@echo "  make synth-row4-pipe Synthesize timing-oriented row4 pipeline core with Yosys"
 	@echo "  make synth-row4-pipe2 Synthesize second timing-oriented row4 pipeline core with Yosys"
+	@echo "  make synth-row4-pipe3 Synthesize third timing-oriented row4 pipeline core with Yosys"
 	@echo "  make synth-apb      Synthesize APB wrapper with Yosys"
 	@echo "  make synth-dma-desc Synthesize DMA descriptor wrapper with Yosys"
 	@echo "  make synth-axi-lite Synthesize AXI4-Lite control wrapper with Yosys"
@@ -66,6 +68,9 @@ sim-row4-pipe:
 sim-row4-pipe2:
 	python3 sim/run_sim.py --mac-variant row4_pipe2
 
+sim-row4-pipe3:
+	python3 sim/run_sim.py --mac-variant row4_pipe3
+
 sim-full16:
 	python3 sim/run_sim.py --mac-variant full16
 
@@ -101,6 +106,9 @@ synth-row4-pipe:
 
 synth-row4-pipe2:
 	scripts/synth_yosys.sh row4_pipe2
+
+synth-row4-pipe3:
+	scripts/synth_yosys.sh row4_pipe3
 
 synth-full16:
 	scripts/synth_yosys.sh full16
