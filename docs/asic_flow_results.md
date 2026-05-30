@@ -62,6 +62,25 @@ not a shuttle or fab submission.
 | Power-grid violations | 0 |
 | Power estimate | 0.028164 W total, with 0.015421 W internal, 0.012743 W switching, and 0.000000128 W leakage |
 
+## Row4 vs Row4 Pipe
+
+The `row4_pipe` ASIC target is a separate OpenLane configuration at
+`openlane/tinynpu_top_row4_pipe/config.json`. It preserves the existing row4
+OpenLane target and uses the same 10 ns / 100 MHz SDC while defining
+`TINYNPU_MAC_ROW4_PIPE` for synthesis. Its ASIC source list is limited to the
+shared defs include, `tinynpu_mac_row4_pipe`, `tinynpu_mac_array`, the A/B
+scratchpad, the C result buffer, and `tinynpu_top`.
+
+| Variant | OpenLane config | Run directory | Clock | Flow | Setup WNS/TNS (ns) | Setup violations | Slew violations | Max-cap violations | Antenna violations | DRC/LVS | Utilization | Std-cell area (um^2) | Power (W) | Status |
+| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- |
+| row4 | `openlane/tinynpu_top/config.json` | `openlane/tinynpu_top/runs/RUN_2026-05-30_00-36-33` | 10 ns / 100 MHz | Complete | -5.831 / -372.767 | 319 | 3,003 | 29 | 2 | Clean / clean | 20.89% | 128,222 | 0.02816 | Not clean |
+| row4_pipe | `openlane/tinynpu_top_row4_pipe/config.json` | `openlane/tinynpu_top_row4_pipe/runs/RUN_2026-05-30_01-55-41` | 10 ns / 100 MHz | Complete | -1.901 / -45.687 | 178 | 2,882 | 21 | 0 | Clean / clean | 18.99% | 116,558 | 0.02282 | Not clean |
+
+The row4_pipe run improves 10 ns setup WNS/TNS and reduces setup, slew, and
+max-cap violation counts relative to the row4 baseline in this flow. It also
+reports clean antenna, DRC, and LVS. It still has setup, max-slew, and max-cap
+violations, so it is not timing closed or signoff clean.
+
 ## Clock Sweep
 
 This controlled sweep estimates the clock period the current row4 RTL can
@@ -88,9 +107,10 @@ fixes antenna behavior.
 
 - This is an ASIC-style RTL-to-GDS flow result only. The design has not been
   submitted to a shuttle or fab.
-- DRC and LVS are clean in this run, but the result is not signoff clean.
-- Timing closure above 50 MHz, max slew, max capacitance, and antenna issues
-  remain across the documented runs.
+- DRC and LVS are clean in the documented row4 and row4_pipe runs, but these
+  results are not signoff clean.
+- At 10 ns / 100 MHz, timing, max slew, and max capacitance issues remain for
+  both row4 and row4_pipe. Some row4 sweep runs also report antenna violations.
 - The 100 MHz clock is a bring-up target, not a closed timing target for this
   implementation. The 50 MHz sweep point closes setup only, not full signoff.
 - The A/B scratchpads and C result buffer are register-based standard-cell

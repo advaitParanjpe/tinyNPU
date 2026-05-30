@@ -1,0 +1,30 @@
+{
+  "DESIGN_NAME": "tinynpu_top",
+  "PDK": "sky130A",
+  "STD_CELL_LIBRARY": "sky130_fd_sc_hd",
+  "VERILOG_FILES": [
+    "dir::../../rtl/tinynpu_defs.svh",
+    "dir::../../rtl/tinynpu_mac_row4_pipe.sv",
+    "dir::../../rtl/tinynpu_mac_array.sv",
+    "dir::../../rtl/tinynpu_scratchpad_i8.sv",
+    "dir::../../rtl/tinynpu_result_buffer_i32.sv",
+    "dir::../../rtl/tinynpu_top.sv"
+  ],
+  "VERILOG_INCLUDE_DIRS": [
+    "dir::../../rtl"
+  ],
+  "VERILOG_DEFINES": [
+    "TINYNPU_MAC_ROW4_PIPE"
+  ],
+  "CLOCK_PORT": "clk",
+  "CLOCK_NET": "clk",
+  "CLOCK_PERIOD": 10.0,
+  "DESIGN_IS_CORE": false,
+  "FP_SIZING": "absolute",
+  "DIE_AREA": "0 0 800 800",
+  "PL_TARGET_DENSITY": 0.45,
+  "SYNTH_READ_BLACKBOX_LIB": true,
+  "RUN_HEURISTIC_DIODE_INSERTION": true,
+  "PNR_SDC_FILE": "dir::../../constraints/tinynpu_top.sdc",
+  "SIGNOFF_SDC_FILE": "dir::../../constraints/tinynpu_top.sdc"
+}
