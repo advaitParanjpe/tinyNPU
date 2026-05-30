@@ -2,10 +2,14 @@
 
 ## Synthesizable RTL
 
-- `rtl/tinynpu_pkg.sv`: shared constants and typedefs.
+- `rtl/tinynpu_defs.svh`: shared matrix width constants for synthesizable RTL.
+- `rtl/tinynpu_pkg.sv`: compatibility package aliasing the shared constants and
+  typedefs for flows that still read the package.
 - `rtl/tinynpu_mac_array.sv`: compile-time MAC variant wrapper.
 - `rtl/tinynpu_mac_serial.sv`: serial one-MAC-per-cycle datapath.
 - `rtl/tinynpu_mac_row4.sv`: default four-lane row MAC datapath.
+- `rtl/tinynpu_mac_row4_pipe.sv`: timing-oriented four-lane row MAC datapath
+  with a product register stage before accumulator update.
 - `rtl/tinynpu_mac_full16.sv`: full-parallel 16-output datapath.
 - `rtl/tinynpu_scratchpad_i8.sv`: 16-entry int8 scratchpad for A/B storage.
 - `rtl/tinynpu_result_buffer_i32.sv`: 16-entry int32 C result buffer.

@@ -16,8 +16,9 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
   for A/B loads, and AXI writes for C stores.
 - DMA done IRQ support on the descriptor wrapper and AXI4-Lite wrapper.
 - DMA-style model with testbench-only descriptor registers and memory movement.
-- Default MAC variant is `row4`, a four-lane row MAC FSM.
-- Selectable `serial`, `row4`, and `full16` MAC variants for area/latency comparison.
+- Default MAC variant is `row4`, an unpipelined four-lane row MAC FSM.
+- Selectable `serial`, `row4`, `row4_pipe`, and `full16` MAC variants for
+  area/latency/timing-oriented comparison.
 - Directed, edge-case, bus protocol, control/status, and deterministic random golden-model verification.
 - Lightweight simulation assertions/checkers and bounded-latency checking.
 - Coverage-style scenario reporting for tested functional/control/bus cases.
@@ -66,6 +67,8 @@ make results
 make sim-serial
 make synth-serial
 make results-serial
+make sim-row4-pipe
+make synth-row4-pipe
 make sim-full16
 make synth-full16
 make results-full16
@@ -275,7 +278,8 @@ The current self-checking Icarus simulation covers:
 
 `make sim` enables the checkers by default. The default `row4` regression
 currently observes a 26-cycle accepted-start-to-done latency. The `serial`
-baseline observes 66 cycles. The `full16` variant observes 8 cycles.
+baseline observes 66 cycles. The timing-oriented `row4_pipe` variant observes
+42 cycles. The `full16` variant observes 8 cycles.
 
 The simulation checkers cover:
 
@@ -298,6 +302,7 @@ make synth-axi-lite
 make synth-axi-read-dma
 make synth-axi-dma
 make synth-serial
+make synth-row4-pipe
 make synth-full16
 ```
 
@@ -310,6 +315,7 @@ Variant-specific outputs are written under:
 - `build/synth/axi_read_dma/`
 - `build/synth/axi_dma/`
 - `build/synth/serial/`
+- `build/synth/row4_pipe/`
 - `build/synth/full16/`
 
 This is a generic Yosys synthesis check, not a technology-mapped PPA flow. It

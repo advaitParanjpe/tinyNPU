@@ -189,7 +189,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Compile and run tinyNPU simulation")
     parser.add_argument("--num-random-tests", type=int, default=50)
     parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--mac-variant", choices=("row4", "serial", "full16"), default="row4")
+    parser.add_argument("--mac-variant", choices=("row4", "row4_pipe", "serial", "full16"), default="row4")
     return parser.parse_args()
 
 
@@ -236,6 +236,7 @@ def main():
         "rtl/tinynpu_assertions.sv",
         "rtl/tinynpu_mac_serial.sv",
         "rtl/tinynpu_mac_row4.sv",
+        "rtl/tinynpu_mac_row4_pipe.sv",
         "rtl/tinynpu_mac_full16.sv",
         "rtl/tinynpu_mac_array.sv",
         "rtl/tinynpu_scratchpad_i8.sv",
@@ -251,11 +252,15 @@ def main():
         "-DTINYNPU_SIM_ASSERT",
         "-I",
         ".",
+        "-I",
+        "rtl",
         "-o",
         str(sim_out),
     ]
     if args.mac_variant == "serial":
         compile_cmd.append("-DTINYNPU_MAC_SERIAL")
+    elif args.mac_variant == "row4_pipe":
+        compile_cmd.append("-DTINYNPU_MAC_ROW4_PIPE")
     elif args.mac_variant == "full16":
         compile_cmd.append("-DTINYNPU_MAC_FULL16")
     compile_cmd.extend(sources)

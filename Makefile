@@ -1,4 +1,4 @@
-.PHONY: all help check asic-check precommit sim sim-apb sim-apb-dma sim-dma-desc sim-axi-lite sim-axi-read-dma sim-axi-dma sim-serial sim-full16 golden vectors synth synth-apb synth-dma-desc synth-axi-lite synth-axi-read-dma synth-axi-dma synth-serial synth-full16 results results-serial results-full16 compare clean
+.PHONY: all help check asic-check precommit sim sim-apb sim-apb-dma sim-dma-desc sim-axi-lite sim-axi-read-dma sim-axi-dma sim-serial sim-row4-pipe sim-full16 golden vectors synth synth-apb synth-dma-desc synth-axi-lite synth-axi-read-dma synth-axi-dma synth-serial synth-row4-pipe synth-full16 results results-serial results-full16 compare clean
 
 all: vectors golden sim synth results
 
@@ -8,6 +8,7 @@ help:
 	@echo "  make asic-check     Validate ASIC-flow scaffold files"
 	@echo "  make golden         Print fixed Python golden-model vectors"
 	@echo "  make sim            Run default row4 simple-bus simulation"
+	@echo "  make sim-row4-pipe  Run timing-oriented row4 pipeline simulation"
 	@echo "  make sim-apb        Run APB wrapper simulation"
 	@echo "  make sim-apb-dma    Run testbench-only DMA-style APB model simulation"
 	@echo "  make sim-dma-desc   Run synthesizable DMA descriptor-wrapper simulation"
@@ -15,6 +16,7 @@ help:
 	@echo "  make sim-axi-read-dma Run AXI read-DMA wrapper simulation"
 	@echo "  make sim-axi-dma   Run full single-beat AXI DMA wrapper simulation"
 	@echo "  make synth          Synthesize default row4 core with Yosys"
+	@echo "  make synth-row4-pipe Synthesize timing-oriented row4 pipeline core with Yosys"
 	@echo "  make synth-apb      Synthesize APB wrapper with Yosys"
 	@echo "  make synth-dma-desc Synthesize DMA descriptor wrapper with Yosys"
 	@echo "  make synth-axi-lite Synthesize AXI4-Lite control wrapper with Yosys"
@@ -56,6 +58,9 @@ sim-axi-dma:
 sim-serial:
 	python3 sim/run_sim.py --mac-variant serial
 
+sim-row4-pipe:
+	python3 sim/run_sim.py --mac-variant row4_pipe
+
 sim-full16:
 	python3 sim/run_sim.py --mac-variant full16
 
@@ -85,6 +90,9 @@ synth-axi-dma:
 
 synth-serial:
 	scripts/synth_yosys.sh serial
+
+synth-row4-pipe:
+	scripts/synth_yosys.sh row4_pipe
 
 synth-full16:
 	scripts/synth_yosys.sh full16
