@@ -14,6 +14,8 @@ matrix multiply accelerator tile with a simple testbench-friendly register bus.
   for A/B loads, and an abstract write port for C stores.
 - Optional full single-beat AXI DMA wrapper with AXI4-Lite control, AXI reads
   for A/B loads, and AXI writes for C stores.
+- Optional AXI4-Stream-style tile core for framed 4x4 A/B input tiles and
+  streamed int32 C output tiles.
 - DMA done IRQ support on the descriptor wrapper and AXI4-Lite wrapper.
 - DMA-style model with testbench-only descriptor registers and memory movement.
 - Default MAC variant is `row4`, an unpipelined four-lane row MAC FSM.
@@ -51,6 +53,7 @@ make vectors
 make check
 make golden
 make sim
+make sim-axis-stream
 make sim-apb
 make sim-apb-dma
 make sim-dma-desc
@@ -96,6 +99,20 @@ timing and electrical closure issues remain. The same page also records a
 controlled clock sweep; 50 MHz closes setup for the original row4 RTL in this
 flow, but no swept target is signoff clean. This is a local ASIC-style
 RTL-to-GDS flow result, not a shuttle/fab submission or signoff-clean claim.
+
+## Streaming Tile Milestone
+
+`tinynpu_axis_stream_tile_core` adds a first AXI4-Stream-style tile interface as
+a separate RTL path. It accepts one framed input tile containing 16 row-major
+int8 A values followed by 16 row-major int8 B values, with `tlast` on final
+`B[15]`, then emits 16 row-major signed int32 C values with `tlast` on final
+`C[15]`. The interface uses only `tvalid`, `tready`, `tdata`, and `tlast`.
+
+This is a simple tile-at-a-time milestone: it handles input stalls and output
+backpressure, but it does not accept another tile while busy and does not claim
+fully overlapped streaming throughput. See
+[docs/streaming_core.md](docs/streaming_core.md) and run `make sim-axis-stream`
+for the self-checking stream-core testbench.
 
 ## Architecture
 
