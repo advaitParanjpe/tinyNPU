@@ -85,10 +85,12 @@ artifacts for `row4`, `serial`, and `full16`.
 
 The completed Dockerized OpenLane 2 run for the row4 `tinynpu_top` core is
 summarized in [docs/asic_flow_results.md](docs/asic_flow_results.md). The
-captured run produced final GDS/DEF/netlist artifacts and reported clean
-DRC/LVS, while timing, electrical, and antenna closure issues remain. This is a
-local ASIC-style RTL-to-GDS flow result, not a shuttle/fab submission or
-signoff-clean claim.
+captured baseline run produced final GDS/DEF/netlist artifacts and reported
+clean DRC/LVS, while timing, electrical, and antenna closure issues remain. The
+same page also records a controlled clock sweep; 50 MHz closes setup for the
+current RTL in this flow, but no swept target is signoff clean. This is a local
+ASIC-style RTL-to-GDS flow result, not a shuttle/fab submission or signoff-clean
+claim.
 
 ## Architecture
 

@@ -62,14 +62,37 @@ not a shuttle or fab submission.
 | Power-grid violations | 0 |
 | Power estimate | 0.028164 W total, with 0.015421 W internal, 0.012743 W switching, and 0.000000128 W leakage |
 
+## Clock Sweep
+
+This controlled sweep estimates the clock period the current row4 RTL can
+satisfy before RTL or physical-design tuning. The sweep used temporary generated
+configs under `build/asic_clock_sweep/` and varied only the OpenLane clock
+period/SDC clock target. RTL, wrappers, MAC architecture, and checked-in
+physical-flow settings were not changed.
+
+| Target | Run directory | Flow | Setup WNS/TNS (ns) | Setup violations | Slew violations | Max-cap violations | Antenna violations | DRC/LVS | Utilization | Std-cell area (um^2) | Power (W) | Status |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- |
+| 20 ns / 50 MHz | `openlane/tinynpu_top/runs/RUN_2026-05-30_01-02-15` | Complete | 0.000 / 0.000 | 0 | 4,230 | 36 | 2 | Clean / clean | 20.13% | 123,532 | 0.01358 | Setup clean only; not signoff clean |
+| 15 ns / 66.7 MHz | `openlane/tinynpu_top/runs/RUN_2026-05-30_01-14-11` | Complete | -2.320 / -53.140 | 144 | 3,579 | 33 | 1 | Clean / clean | 20.23% | 124,154 | 0.01826 | Not clean |
+| 12.5 ns / 80 MHz | `openlane/tinynpu_top/runs/RUN_2026-05-30_01-26-33` | Complete | -2.947 / -120.757 | 228 | 3,431 | 30 | 0 | Clean / clean | 20.62% | 126,548 | 0.02225 | Not clean |
+| 10 ns / 100 MHz baseline | `openlane/tinynpu_top/runs/RUN_2026-05-30_00-36-33` | Complete | -5.831 / -372.767 | 319 | 3,003 | 29 | 2 | Clean / clean | 20.89% | 128,222 | 0.02816 | Not clean |
+
+The only swept target that closes setup in this ASIC-style flow is 20 ns / 50
+MHz. No swept target is signoff clean: all targets still have max-slew and
+max-capacitance violations, and the 20 ns, 15 ns, and 10 ns runs also report
+antenna violations. The 12.5 ns run's antenna-clean result should be treated as
+a run-specific routing/repair outcome, not evidence that a faster clock target
+fixes antenna behavior.
+
 ## Limitations
 
 - This is an ASIC-style RTL-to-GDS flow result only. The design has not been
   submitted to a shuttle or fab.
 - DRC and LVS are clean in this run, but the result is not signoff clean.
-- Timing, max slew, max capacitance, and antenna issues remain.
+- Timing closure above 50 MHz, max slew, max capacitance, and antenna issues
+  remain across the documented runs.
 - The 100 MHz clock is a bring-up target, not a closed timing target for this
-  implementation.
+  implementation. The 50 MHz sweep point closes setup only, not full signoff.
 - The A/B scratchpads and C result buffer are register-based standard-cell
   storage in this run. The OpenLane metrics report zero macros, so these are not
   SRAM macros.
