@@ -9,6 +9,7 @@ area, timing, or power numbers.
 | v24 | row4 | 4-lane row MAC | 26 | 14514 | 1.00x | 1.00x | scenario summary generated | Default datapath; generic gates only |
 | v24 | serial | serial MAC baseline | 66 | 10347 | 2.54x | 0.71x | scenario summary generated | Lower cell count, higher latency; generic gates only |
 | v24 | full16 | 16-lane full parallel MAC | 8 | 34149 | 0.31x | 2.35x | scenario summary generated | Lowest latency, highest generic cell count |
+| current | systolic4x4 | output-stationary 4x4 PE array | 17 | 23911 | 0.65x | 1.65x | scenario summary generated | 100 MHz setup/hold closed in the documented OpenLane run; generic cells shown here |
 
 APB wrapper synthesis is tracked separately because it changes the integration
 top, not the MAC datapath comparison.
@@ -54,6 +55,7 @@ the OpenLane ASIC targets and is not an ASIC timing-closure claim.
 | --- | --- | --- | ---: | --- | --- |
 | `tinynpu_axis_stream_tile_core` | `make sim-axis-stream` | passed | 13 | tile-at-a-time | AXI4-Stream subset with input/output backpressure and malformed-frame tests |
 | `tinynpu_axis_stream_npu` | `make sim-axis-stream-npu` | passed | 11 | 156-cycle first tile, 64 cycles/tile steady state, 63 cycles/tile observed input acceptance | Double-buffered single-clock prototype with load/compute/output overlap observed |
+| `tinynpu_axis_stream_npu` | `make sim-axis-stream-npu-systolic4x4` | passed | 11 | 115-cycle first tile, 64 cycles/tile steady state, 63 cycles/tile observed input acceptance | Same stream and ping-pong-buffer architecture with the systolic compute engine |
 
 For the double-buffered stream NPU, throughput estimates are frequency
 dependent: `tiles/s = f_clk / 64`, and each 4x4 tile is 64 MACs. The documented

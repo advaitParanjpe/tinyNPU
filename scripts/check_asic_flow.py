@@ -14,6 +14,7 @@ ROW4_PIPE2_95_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe2_95m
 ROW4_PIPE2_93_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe2_93mhz" / "config.json"
 ROW4_PIPE2_91_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe2_91mhz" / "config.json"
 ROW4_PIPE2_DUPA_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_row4_pipe2_dupa" / "config.json"
+SYSTOLIC4X4_CONFIG_PATH = REPO_ROOT / "openlane" / "tinynpu_top_systolic4x4" / "config.json"
 SDC_PATH = REPO_ROOT / "constraints" / "tinynpu_top.sdc"
 ROW4_EXPECTED_SOURCES = (
     "rtl/tinynpu_mac_row4.sv",
@@ -41,6 +42,14 @@ ROW4_PIPE2_EXPECTED_SOURCES = (
 ROW4_PIPE2_DUPA_EXPECTED_SOURCES = (
     "rtl/tinynpu_defs.svh",
     "rtl/tinynpu_mac_row4_pipe2_dupa.sv",
+    "rtl/tinynpu_mac_array.sv",
+    "rtl/tinynpu_scratchpad_i8.sv",
+    "rtl/tinynpu_result_buffer_i32.sv",
+    "rtl/tinynpu_top.sv",
+)
+SYSTOLIC4X4_EXPECTED_SOURCES = (
+    "rtl/tinynpu_defs.svh",
+    "rtl/tinynpu_mac_systolic4x4.sv",
     "rtl/tinynpu_mac_array.sv",
     "rtl/tinynpu_scratchpad_i8.sv",
     "rtl/tinynpu_result_buffer_i32.sv",
@@ -120,6 +129,9 @@ def main():
     if rc != 0:
         return rc
     rc = check_config(ROW4_PIPE2_DUPA_CONFIG_PATH, ROW4_PIPE2_DUPA_EXPECTED_SOURCES, ["TINYNPU_MAC_ROW4_PIPE2_DUPA"])
+    if rc != 0:
+        return rc
+    rc = check_config(SYSTOLIC4X4_CONFIG_PATH, SYSTOLIC4X4_EXPECTED_SOURCES, ["TINYNPU_MAC_SYSTOLIC4X4"])
     if rc != 0:
         return rc
 

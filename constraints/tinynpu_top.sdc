@@ -16,3 +16,7 @@ set input_ports [get_ports {rst_n bus_valid bus_we \
 
 set_input_delay 2.000 -clock clk $input_ports
 set_output_delay 2.000 -clock clk [all_outputs]
+
+# rst_n is an asynchronous assertion into a two-flop synchronizer. Its
+# deassertion is synchronized before reaching the core reset tree.
+set_false_path -from [get_ports rst_n]

@@ -14,6 +14,9 @@ REQUIRED_FILES = (
     "Makefile",
     "rtl/tinynpu_top.sv",
     "rtl/tinynpu_mac_array.sv",
+    "rtl/tinynpu_mac_row4_pipe.sv",
+    "rtl/tinynpu_mac_row4_pipe2.sv",
+    "rtl/tinynpu_mac_systolic4x4.sv",
     "rtl/tinynpu_scratchpad_i8.sv",
     "rtl/tinynpu_result_buffer_i32.sv",
     "rtl/tinynpu_mem_port_assertions.sv",
@@ -22,6 +25,8 @@ REQUIRED_FILES = (
     "rtl/tinynpu_axi_lite_wrapper.sv",
     "rtl/tinynpu_axi_read_dma_wrapper.sv",
     "rtl/tinynpu_axi_dma_wrapper.sv",
+    "rtl/tinynpu_axis_stream_tile_core.sv",
+    "rtl/tinynpu_axis_stream_npu.sv",
     "tb/tb_tinynpu_top.sv",
     "tb/tb_tinynpu_apb_wrapper.sv",
     "tb/tb_tinynpu_apb_dma_model.sv",
@@ -29,6 +34,8 @@ REQUIRED_FILES = (
     "tb/tb_tinynpu_axi_lite_wrapper.sv",
     "tb/tb_tinynpu_axi_read_dma_wrapper.sv",
     "tb/tb_tinynpu_axi_dma_wrapper.sv",
+    "tb/tb_tinynpu_axis_stream_tile_core.sv",
+    "tb/tb_tinynpu_axis_stream_npu.sv",
     "model/golden_matmul.py",
     "sim/run_sim.py",
     "sim/run_apb_sim.py",
@@ -37,6 +44,8 @@ REQUIRED_FILES = (
     "sim/run_axi_lite_sim.py",
     "sim/run_axi_read_dma_sim.py",
     "sim/run_axi_dma_sim.py",
+    "sim/run_axis_stream_sim.py",
+    "sim/run_axis_stream_npu_sim.py",
     "docs/bus_protocol.md",
     "docs/axi_lite_wrapper.md",
     "docs/axi_read_dma_wrapper.md",
@@ -48,6 +57,8 @@ REQUIRED_FILES = (
     "docs/dma_descriptor_wrapper.md",
     "docs/performance.md",
     "docs/results.md",
+    "docs/streaming_core.md",
+    "docs/streaming_npu.md",
 )
 
 GENERATED_VECTOR_JSON = "tests/test_vectors/generated_matmul_tests.json"
@@ -55,7 +66,7 @@ GENERATED_VECTOR_SVH = "tests/test_vectors/generated_matmul_tests.svh"
 
 MERGE_MARKERS = ("<" * 7, "=" * 7, ">" * 7)
 ABSOLUTE_PATH_MARKERS = ("/Users/" + "advaitparanjpe", "/home/" + "advait")
-SKIP_DIRS = {".git", "build"}
+SKIP_DIRS = {".git", "build", "runs"}
 TEXT_SUFFIXES = {
     ".md",
     ".py",

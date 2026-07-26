@@ -2,6 +2,26 @@
 
 `include "tinynpu_defs.svh"
 
+module tinynpu_reset_sync (
+  input  logic clk,
+  input  logic arst_n,
+  output logic srst_n
+);
+
+  logic sync_q;
+
+  always_ff @(posedge clk or negedge arst_n) begin
+    if (!arst_n) begin
+      sync_q <= 1'b0;
+      srst_n <= 1'b0;
+    end else begin
+      sync_q <= 1'b1;
+      srst_n <= sync_q;
+    end
+  end
+
+endmodule
+
 module tinynpu_top (
   input  logic        clk,
   input  logic        rst_n,
@@ -38,6 +58,7 @@ module tinynpu_top (
   logic signed [`DATA_W-1:0] a_read_data;
   logic signed [`DATA_W-1:0] b_read_data;
   logic signed [`ACC_W-1:0]  c_read_data;
+  logic                      core_rst_n;
 
 `ifdef TINYNPU_SIM_ASSERT
   logic                debug_start_accepted;
@@ -53,8 +74,8 @@ module tinynpu_top (
   assign b_read_idx = (bus_addr - ADDR_B_BASE) >> 2;
   assign c_read_idx = (bus_addr - ADDR_C_BASE) >> 2;
 
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
+  always_ff @(posedge clk or negedge core_rst_n) begin
+    if (!core_rst_n) begin
       mac_start <= 1'b0;
       done_q    <= 1'b0;
       bus_rdata <= 32'h0;
@@ -109,9 +130,15 @@ module tinynpu_top (
     end
   end
 
+  tinynpu_reset_sync u_reset_sync (
+    .clk    (clk),
+    .arst_n (rst_n),
+    .srst_n (core_rst_n)
+  );
+
   tinynpu_scratchpad_i8 u_a_scratchpad (
     .clk        (clk),
-    .rst_n      (rst_n),
+    .rst_n      (core_rst_n),
     .write_en   (a_write_en),
     .write_idx  (a_write_idx),
     .write_data (bus_wdata[`DATA_W-1:0]),
@@ -122,7 +149,7 @@ module tinynpu_top (
 
   tinynpu_scratchpad_i8 u_b_scratchpad (
     .clk        (clk),
-    .rst_n      (rst_n),
+    .rst_n      (core_rst_n),
     .write_en   (b_write_en),
     .write_idx  (b_write_idx),
     .write_data (bus_wdata[`DATA_W-1:0]),
@@ -133,7 +160,7 @@ module tinynpu_top (
 
   tinynpu_result_buffer_i32 u_c_result_buffer (
     .clk            (clk),
-    .rst_n          (rst_n),
+    .rst_n          (core_rst_n),
     .load_en        (mac_done),
     .load_flat_data (mac_c_flat),
     .read_idx       (c_read_idx),
@@ -143,7 +170,7 @@ module tinynpu_top (
 
   tinynpu_mac_array u_mac_array (
     .clk    (clk),
-    .rst_n  (rst_n),
+    .rst_n  (core_rst_n),
     .start  (mac_start),
     .a_flat (mac_a_flat),
     .b_flat (mac_b_flat),
@@ -155,7 +182,7 @@ module tinynpu_top (
 `ifdef TINYNPU_SIM_ASSERT
   tinynpu_assertions u_tinynpu_assertions (
     .clk                    (clk),
-    .rst_n                  (rst_n),
+    .rst_n                  (core_rst_n),
     .busy                   (mac_busy),
     .done                   (done_q),
     .start_accepted         (debug_start_accepted),

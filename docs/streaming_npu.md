@@ -51,14 +51,17 @@ Malformed input frames are discarded. An early `s_axis_tlast` or a missing final
 The prototype uses:
 
 - two A/B input tile buffers;
-- one reused `tinynpu_mac_row4_pipe2` compute engine;
+- one compute engine, selected as `tinynpu_mac_row4_pipe2` by default or
+  `tinynpu_mac_systolic4x4` with `TINYNPU_MAC_SYSTOLIC4X4`;
 - two C result buffers;
 - independent load, compute, and output FSMs.
 
 The load FSM fills an available A/B buffer. The compute FSM claims a full A/B
-buffer and a free C buffer, runs the row4_pipe2 MAC, writes the C buffer, and
-releases the input buffer. The output FSM streams any full C buffer and releases
-it after the final accepted output beat.
+buffer and a free C buffer, runs the selected MAC, writes the C buffer, and
+releases the input buffer. The output FSM streams any full C buffer and
+releases it after the final accepted output beat. The A/B and C ping-pong
+buffers, packet format, and stream ports are identical for both compute
+engines.
 
 ## Buffer Ownership
 
@@ -87,21 +90,20 @@ remain stable while `m_axis_tvalid` is high and `m_axis_tready` is low.
 
 ## Timing And Throughput
 
-The current self-checking simulation reports the following metrics for the
+The self-checking simulation reports the following metrics for the
 double-buffered AXI4-Stream prototype:
 
-| Metric | Value |
-| --- | ---: |
-| Single-tile latency | 156 cycles |
-| Steady-state cycles per tile, back-to-back no output stalls | 64 cycles/tile |
-| Maximum input acceptance rate in the current testbench | 63 cycles/tile |
-| Load/compute/output overlap observed | Yes |
+| Compute engine | Single-tile latency | Steady-state cycles/tile | Maximum input acceptance | Overlap |
+| --- | ---: | ---: | ---: | --- |
+| `row4_pipe2` (default) | 156 cycles | 64 | 63 cycles/tile | Yes |
+| `systolic4x4` | 115 cycles | 64 | 63 cycles/tile | Yes |
 
 The measured input acceptance rate includes the simple one-beat-at-a-time
-testbench driver overhead. The design has one compute engine, so steady-state
-throughput is still compute-limited by the row4_pipe2 MAC plus output scheduling
-overhead. This is an overlapped tile pipeline, not a fully parallel multi-MAC
-streaming array.
+testbench driver overhead. The systolic engine reduces isolated-tile latency,
+while the current 32-beat input frame and 16-beat output schedule leave both
+variants at the same measured 64-cycle steady-state interval. The design still
+has one compute engine, so this is an overlapped tile pipeline rather than a
+multi-tile array.
 
 The intended overlap looks like this for consecutive tiles:
 
@@ -139,7 +141,9 @@ for ASIC timing or added to the OpenLane implementation targets.
 
 ## Verification
 
-`make sim-axis-stream-npu` runs a self-checking testbench covering:
+`make sim-axis-stream-npu` runs the default row4_pipe2 engine and
+`make sim-axis-stream-npu-systolic4x4` runs the same self-checking testbench
+with the systolic engine. The testbench covers:
 
 - single-tile identity;
 - two back-to-back tiles;
@@ -157,7 +161,7 @@ for ASIC timing or added to the OpenLane implementation targets.
 
 - Fixed 4x4 tile shape.
 - Single-clock RTL only; there is no CDC or multi-clock integration yet.
-- One row4_pipe2 MAC engine, so compute is not multi-tile parallel.
+- One selected MAC engine, so compute is not multi-tile parallel.
 - Only two input buffers and two output buffers.
 - No packet IDs or metadata, so outputs are emitted in compute/output buffer
   order for this local pipeline.
@@ -173,7 +177,7 @@ for ASIC timing or added to the OpenLane implementation targets.
   precisely.
 - Add optional metadata sidebands for tile IDs if out-of-order or multi-engine
   execution is introduced.
-- Explore multiple MAC engines or a systolic/line-buffered datapath for higher
-  throughput.
+- Explore multiple systolic engines or a continuous line-buffered dataflow for
+  higher throughput.
 - Add synthesis and ASIC-flow experiments only after the streaming RTL and
   verification plan stabilize.

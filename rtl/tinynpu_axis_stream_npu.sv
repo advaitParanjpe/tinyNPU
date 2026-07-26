@@ -81,7 +81,11 @@ module tinynpu_axis_stream_npu (
                 (in_state0_q != IN_FREE) || (in_state1_q != IN_FREE) ||
                 (out_state0_q != OUT_FREE) || (out_state1_q != OUT_FREE);
 
+`ifdef TINYNPU_MAC_SYSTOLIC4X4
+  tinynpu_mac_systolic4x4 u_mac (
+`else
   tinynpu_mac_row4_pipe2 u_mac (
+`endif
     .clk    (clk),
     .rst_n  (rst_n),
     .start  (mac_start_q),

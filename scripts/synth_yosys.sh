@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 MAC_VARIANT="${1:-row4}"
-if [ "${MAC_VARIANT}" != "row4" ] && [ "${MAC_VARIANT}" != "serial" ] && [ "${MAC_VARIANT}" != "full16" ] && [ "${MAC_VARIANT}" != "apb" ] && [ "${MAC_VARIANT}" != "dma_desc" ] && [ "${MAC_VARIANT}" != "axi_lite" ] && [ "${MAC_VARIANT}" != "axi_read_dma" ] && [ "${MAC_VARIANT}" != "axi_dma" ]; then
-  echo "ERROR: expected variant 'row4', 'serial', 'full16', 'apb', 'dma_desc', 'axi_lite', 'axi_read_dma', or 'axi_dma', got '${MAC_VARIANT}'"
+if [ "${MAC_VARIANT}" != "row4" ] && [ "${MAC_VARIANT}" != "row4_pipe" ] && [ "${MAC_VARIANT}" != "row4_pipe2" ] && [ "${MAC_VARIANT}" != "row4_pipe2_dupa" ] && [ "${MAC_VARIANT}" != "row4_pipe3" ] && [ "${MAC_VARIANT}" != "systolic4x4" ] && [ "${MAC_VARIANT}" != "serial" ] && [ "${MAC_VARIANT}" != "full16" ] && [ "${MAC_VARIANT}" != "apb" ] && [ "${MAC_VARIANT}" != "dma_desc" ] && [ "${MAC_VARIANT}" != "axi_lite" ] && [ "${MAC_VARIANT}" != "axi_read_dma" ] && [ "${MAC_VARIANT}" != "axi_dma" ]; then
+  echo "ERROR: expected variant 'row4', 'row4_pipe', 'row4_pipe2', 'row4_pipe2_dupa', 'row4_pipe3', 'systolic4x4', 'serial', 'full16', 'apb', 'dma_desc', 'axi_lite', 'axi_read_dma', or 'axi_dma', got '${MAC_VARIANT}'"
   exit 2
 fi
 
@@ -59,6 +59,16 @@ fi
 YOSYS_CMD=(yosys)
 if [ "${MAC_VARIANT}" = "serial" ]; then
   YOSYS_CMD+=( -D TINYNPU_MAC_SERIAL )
+elif [ "${MAC_VARIANT}" = "systolic4x4" ]; then
+  YOSYS_CMD+=( -D TINYNPU_MAC_SYSTOLIC4X4 )
+elif [ "${MAC_VARIANT}" = "row4_pipe3" ]; then
+  YOSYS_CMD+=( -D TINYNPU_MAC_ROW4_PIPE3 )
+elif [ "${MAC_VARIANT}" = "row4_pipe2_dupa" ]; then
+  YOSYS_CMD+=( -D TINYNPU_MAC_ROW4_PIPE2_DUPA )
+elif [ "${MAC_VARIANT}" = "row4_pipe2" ]; then
+  YOSYS_CMD+=( -D TINYNPU_MAC_ROW4_PIPE2 )
+elif [ "${MAC_VARIANT}" = "row4_pipe" ]; then
+  YOSYS_CMD+=( -D TINYNPU_MAC_ROW4_PIPE )
 elif [ "${MAC_VARIANT}" = "full16" ]; then
   YOSYS_CMD+=( -D TINYNPU_MAC_FULL16 )
 fi

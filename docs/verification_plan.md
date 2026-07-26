@@ -4,8 +4,8 @@
 
 - 4x4 signed int8 matrix multiply through the public register bus
 - A/B scratchpad readback and C result-buffer readback through the bus
-- Serial, row4, row4_pipe, row4_pipe2, and full16 MAC datapaths with fixed
-  row-major C output ordering
+- Serial, row4, row4_pipe, row4_pipe2, systolic4x4, and full16 MAC datapaths
+  with fixed row-major C output ordering
 - Directed functional cases: identity, all zeros, all ones, mixed signed values
 - Signed arithmetic edge cases: max positive, min negative times positive, alternating extremes, sparse single nonzero
 - Control/status behavior: start while busy, sticky done, clear done, new start after done
@@ -60,9 +60,10 @@
 - DMA memory-port requests remain asserted and stable while stalled
 - Testbench latency accounting reports accepted-start-to-done latency
 - Current observed max latencies are 66 cycles for `serial`, 26 cycles for
-  `row4`, 42 cycles for `row4_pipe`, 58 cycles for `row4_pipe2`, and 8 cycles
-  for `full16`, bounded by a 200-cycle checker. The pipelined row4 variants
-  intentionally increase latency to shorten the ASIC timing paths.
+  `row4`, 42 cycles for `row4_pipe`, 58 cycles for `row4_pipe2`, 17 cycles for
+  `systolic4x4`, and 8 cycles for `full16`, bounded by a 200-cycle checker. The
+  pipelined row4 and systolic variants use explicit pipeline cuts to shorten
+  ASIC timing paths.
 
 ## Coverage-Style Reporting
 

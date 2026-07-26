@@ -106,7 +106,26 @@ make results-full16
 
 ## Systolic-Style 4x4 Array
 
-- More NPU-like dataflow.
-- More complex control and data movement.
-- Better stepping stone toward larger matrix engines.
-- Not planned until the basic bus, verification, and synthesis flows are stable.
+- Output-stationary 4x4 processing-element array selected with
+  `TINYNPU_MAC_SYSTOLIC4X4`.
+- Preserves the same top-level register bus, A/B scratchpads, C result buffer,
+  and start/busy/done contract as the other MAC variants.
+- Skews A operands by row and moves them right while skewing B operands by
+  column and moving them down. Each PE retains its own int32 C accumulator.
+- Separates edge injection, operand forwarding, low/high-nibble partial
+  multiplication, product combination, and accumulation with registers. This
+  avoids a single select-to-8x8-multiply-to-accumulate path.
+- Completes one register-controlled 4x4 tile in 17 accepted-start-to-done
+  cycles in the self-checking simulation.
+- Uses substantially more arithmetic and register area than the four-lane row
+  engines, but is a direct stepping stone toward larger matrix engines.
+- Can also replace the compute engine inside the existing double-buffered
+  AXI4-Stream NPU without changing that module's stream or buffer interfaces.
+
+Run:
+
+```sh
+make sim-systolic4x4
+make synth-systolic4x4
+make sim-axis-stream-npu-systolic4x4
+```

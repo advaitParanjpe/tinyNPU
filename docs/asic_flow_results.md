@@ -4,9 +4,10 @@ Run:
 
 - `openlane/tinynpu_top/runs/RUN_2026-05-30_00-36-33`
 
-This page summarizes the completed Dockerized OpenLane 2 run for the row4
-`tinynpu_top` ASIC-style RTL-to-GDS flow scaffold. It is a local flow result,
-not a shuttle or fab submission.
+This page summarizes completed Dockerized OpenLane 2 runs for the
+`tinynpu_top` ASIC-style RTL-to-GDS flow scaffold, beginning with row4 and
+including the timing-closed systolic4x4 experiment. These are local flow
+results, not shuttle or fab submissions.
 
 ## Final Artifacts
 
@@ -62,6 +63,53 @@ not a shuttle or fab submission.
 | Power-grid violations | 0 |
 | Power estimate | 0.028164 W total, with 0.015421 W internal, 0.012743 W switching, and 0.000000128 W leakage |
 
+## 4x4 Systolic Array At 100 MHz
+
+The 4x4 output-stationary systolic variant is the first documented
+`tinynpu_top` implementation to close both setup and hold at 10 ns across the
+full post-route multi-corner report. It preserves the register bus,
+scratchpads, result buffer, and start/busy/done contract. Only the selected MAC
+datapath changes.
+
+| Metric | Value |
+| --- | --- |
+| OpenLane config | `openlane/tinynpu_top_systolic4x4/config.json` |
+| Run directory | `openlane/tinynpu_top_systolic4x4/runs/RUN_2026-07-25_systolic4x4_closed_100mhz` |
+| Flow status | Complete, `flow__errors__count = 0` |
+| PDK / standard-cell library | `sky130A` / `sky130_fd_sc_hd` |
+| Clock target | 10.000 ns / 100 MHz on `clk` |
+| Functional latency | 17 accepted-start-to-done cycles |
+| Generic Yosys cell count | 23,911 |
+| Post-route worst setup slack / TNS / violations | +0.8860 ns / 0 ns / 0 |
+| Post-route worst hold slack / TNS / violations | +0.2816 ns / 0 ns / 0 |
+| Standard-cell count / area | 40,449 / 224,819 um^2 |
+| Standard-cell utilization | 36.6334% |
+| Power estimate | 0.0404935 W |
+| Max slew / max capacitance violations | 2,644 / 27 |
+| Antenna violations | 1 pin on 1 net |
+| Routed / Magic / KLayout DRC | Clean / clean / clean |
+| LVS | Passed |
+
+The PE pipeline registers A/B forwarding, low- and high-nibble partial
+products, the combined signed product, and the local int32 accumulation. This
+cuts the select-multiply-accumulate chain that limited the row architectures.
+
+An intermediate routed run of the refined datapath already had clean setup and
+zero register-to-register hold violations, but reported 136 removal violations
+from the raw asynchronous `rst_n` port. The final RTL uses asynchronous reset
+assertion with two-flop synchronized deassertion; the external reset port is
+false-pathed only into that synchronizer. The final post-route report has zero
+setup and hold violations.
+
+This is timing closed at 100 MHz, not fully signoff clean: the remaining
+slew, capacitance, and antenna violations still require physical cleanup.
+
+Primary final artifacts are under the run's `final/` directory, including
+GDS, DEF, LEF, SDF, SPEF, gate-level and post-route netlists, SPICE, and
+`metrics.csv`. The post-route timing table is
+`57-openroad-stapostpnr/summary.rpt`; the manufacturability result is
+`77-misc-reportmanufacturability/manufacturability.rpt`.
+
 ## Row4 vs Pipelined Row4 Variants
 
 The `row4_pipe`, `row4_pipe2`, `row4_pipe2_dupa`, and `row4_pipe3` ASIC targets are separate
@@ -98,12 +146,13 @@ WNS/TNS and reduces setup violations. It is still not timing closed or signoff
 clean: max-slew and max-cap violations remain, and the 10 ns row4_pipe3 run
 reports one antenna pin/net violation despite clean DRC and LVS.
 
-## Selected 95 MHz Implementation Target
+## Prior Row4 95 MHz Implementation Target
 
-The selected realistic implementation target is row4_pipe2 at 10.5 ns, about
-95.2 MHz. This target is separate from the preserved 10 ns / 100 MHz row4_pipe2
-exploration run. It starts from the retained tuned row4_pipe2 physical-flow
-settings and uses a row4_pipe2-specific 10.5 ns SDC.
+Before the systolic experiment, the selected row-family implementation target
+was row4_pipe2 at 10.5 ns, about 95.2 MHz. This target is separate from the
+preserved 10 ns / 100 MHz row4_pipe2 exploration run. It starts from the
+retained tuned row4_pipe2 physical-flow settings and uses a
+row4_pipe2-specific 10.5 ns SDC.
 
 | Item | Value |
 | --- | --- |
@@ -138,9 +187,9 @@ Primary final artifacts for this run are:
 
 The 100 MHz row4_pipe2 run remains the aggressive exploration target and is
 still slightly negative: WNS/TNS -0.343 / -1.588 ns with 21 setup violations.
-The 95 MHz target is the realistic selected implementation target, but this
-specific OpenLane run is still not setup-clean. Because setup did not close,
-no additional electrical-cleanup experiment was kept for this target. The run
+The 95 MHz target was the realistic selected row-family target, but this
+specific OpenLane run is still not setup-clean. Because setup did not close, no
+additional electrical-cleanup experiment was kept for this target. The run
 also has max-slew, max-cap, and antenna violations, so it is not signoff-clean.
 
 ## Selected Implementation Frequency Sweep
@@ -163,12 +212,10 @@ the requested condition for an electrical-cleanup pass was setup closure at
 frequency-sweep targets is signoff clean: setup remains negative at all three
 periods, and max-slew/max-cap violations remain throughout.
 
-The highest frequency target that is closest to signoff-clean is still not
-closed. Among these selected row4_pipe2 targets, 11.0 ns / 90.9 MHz is the best
-documented implementation point because it has the least-negative setup result,
-hold is clean, antenna is clean, and DRC/LVS are clean. It should be described
-as the best current ASIC-style implementation attempt, not as timing-closed or
-signoff-clean.
+Among these row4_pipe2 sweep targets, 11.0 ns / 90.9 MHz is the best documented
+point because it has the least-negative setup result, hold is clean, antenna is
+clean, and DRC/LVS are clean. It is not timing-closed or signoff-clean and has
+been superseded as the overall implementation choice by systolic4x4.
 
 ## Row4 Pipe Physical-Tuning Experiment
 
@@ -189,12 +236,10 @@ pin/net violation. Because the experiment did not materially improve WNS and did
 not preserve antenna cleanliness, the checked-in row4_pipe config was restored to
 the baseline settings.
 
-The next lowest-risk timing step is an RTL pipeline cut around the remaining
-critical region: register the `k_q`/state-dependent operand-select outputs
-before product generation, then perform signed int8 multiplication/product
-registration in the following cycle. That targets the observed
-control-select-to-product-register path directly; further OpenLane-only tuning
-is unlikely to recover the remaining roughly 1.9 ns WNS by itself.
+This result motivated the later RTL pipeline cuts and ultimately the
+output-stationary systolic4x4 datapath documented above. The systolic run
+confirmed that architectural partitioning, rather than OpenLane-only tuning,
+was required to close the 100 MHz setup target.
 
 ## Clock Sweep
 
@@ -223,15 +268,15 @@ fixes antenna behavior.
 - This is an ASIC-style RTL-to-GDS flow result only. The design has not been
   submitted to a shuttle or fab.
 - DRC and LVS are clean in the documented row4, row4_pipe, row4_pipe2,
-  row4_pipe2_dupa, and row4_pipe3 runs, but these results are not signoff clean.
+  row4_pipe2_dupa, row4_pipe3, and systolic4x4 runs, but these results are not
+  signoff clean.
 - At 10 ns / 100 MHz, timing, max slew, and max capacitance issues remain for
   row4, row4_pipe, row4_pipe2, row4_pipe2_dupa, and row4_pipe3. Some row4 sweep
   runs and the documented row4_pipe3 run also report antenna violations.
-- The 100 MHz clock is a bring-up target, not a closed timing target for this
-  implementation. The 95 MHz row4_pipe2 target is the selected realistic
-  implementation target, but the documented 10.5 ns run still has setup,
-  max-slew, max-cap, and antenna violations. The 50 MHz sweep point closes setup
-  only, not full signoff.
+- The systolic4x4 variant closes setup and hold at 100 MHz, but is not fully
+  signoff clean because slew, max-capacitance, and antenna violations remain.
+  The row4-family 100 MHz targets remain timing-open; the 50 MHz row4 sweep
+  point closes setup only, not full signoff.
 - The A/B scratchpads and C result buffer are register-based standard-cell
   storage in this run. The OpenLane metrics report zero macros, so these are not
   SRAM macros.
@@ -240,7 +285,8 @@ fixes antenna behavior.
 
 ## CV-Ready Summary
 
-Completed a local OpenLane 2/SKY130 ASIC-style RTL-to-GDS flow for the row4
-`tinynpu_top` accelerator core, producing GDS/DEF/netlist artifacts with clean
-DRC/LVS in the captured run. Remaining closure work includes timing, electrical
-violations, and antenna repair; this is not a tapeout or signoff-clean claim.
+Designed and verified a fixed 4x4 output-stationary systolic int8 matrix
+accelerator, then completed a local OpenLane 2/SKY130 RTL-to-GDS implementation
+at 100 MHz with positive post-route setup and hold slack and clean DRC/LVS.
+Remaining work is electrical and antenna cleanup; this is not a tapeout or
+fully signoff-clean claim.

@@ -12,7 +12,7 @@ release, or production NPU.
 - 4x4 signed int8 matrix multiply with signed int32 accumulation.
 - Register-controlled `tinynpu_top` with A/B scratchpads and C result buffer.
 - Selectable MAC variants: `serial`, `row4`, `row4_pipe`, `row4_pipe2`,
-  `row4_pipe2_dupa`, `row4_pipe3`, and `full16`.
+  `row4_pipe2_dupa`, `row4_pipe3`, `systolic4x4`, and `full16`.
 - APB wrapper, DMA descriptor wrapper, AXI4-Lite control wrapper, AXI read-DMA
   wrapper, and full single-beat AXI DMA wrapper.
 - AXI4-Stream tile interface and double-buffered AXI4-Stream streaming NPU
@@ -80,7 +80,7 @@ flowchart LR
   LFSM --> AB1["A/B buffer pong"]
   AB0 --> CFSM["compute FSM"]
   AB1 --> CFSM
-  CFSM --> MAC2["row4_pipe2 compute engine"]
+  CFSM --> MAC2["row4_pipe2 or systolic4x4 engine"]
   MAC2 --> C0["C buffer ping"]
   MAC2 --> C1["C buffer pong"]
   C0 --> OFSM["output FSM"]
@@ -95,7 +95,7 @@ flowchart LR
 | Register-controlled core | Verified by directed, control/status, bus, and deterministic random tests |
 | APB / AXI-Lite / DMA wrappers | Verified by focused wrapper simulations |
 | Full AXI DMA | Single-beat AXI reads for A/B and writes for C; no bursts or multiple outstanding transactions |
-| ASIC-style flow | OpenLane/SKY130 runs completed and documented; no signoff-clean or tapeout claim |
+| ASIC-style flow | Systolic4x4 setup/hold closed at 100 MHz; DRC/LVS clean; electrical/antenna cleanup remains |
 | Streaming tile core | Tile-at-a-time AXI4-Stream subset verified |
 | Streaming NPU | Double-buffered single-clock prototype verified in simulation |
 
@@ -132,17 +132,18 @@ outstanding transactions.
 ## ASIC / OpenLane Results
 
 The OpenLane work is documented as ASIC-style RTL-to-GDS exploration using
-SKY130. The 100 MHz target is aggressive exploration and is not closed.
-`row4_pipe2` is the best balanced documented timing/PPA target, but no target is
-signoff-clean because setup and/or electrical/antenna issues remain.
+SKY130. The systolic4x4 variant is the first target to close both setup and hold
+at 100 MHz. It is timing closed, but not fully signoff clean because
+electrical and antenna issues remain.
 
-| Variant | Latency | Generic cells | 10 ns WNS/TNS | Setup viols | DRC/LVS | Notes |
+| Variant | Latency | Generic cells | 10 ns setup slack / TNS | Setup/Hold viols | DRC/LVS | Notes |
 | --- | ---: | ---: | ---: | ---: | --- | --- |
-| `row4` | 26 cycles | 14,514 | -5.831 / -372.767 ns | 319 | clean / clean | Baseline four-lane row MAC |
-| `row4_pipe` | 42 cycles | 15,026 | -1.901 / -45.687 ns | 178 | clean / clean | Product register stage |
-| `row4_pipe2` tuned | 58 cycles | 15,198 | -0.343 / -1.588 ns | 21 | clean / clean | Best balanced 100 MHz attempt |
-| `row4_pipe2_dupa` | 58 cycles | 15,198 | -0.314 / -1.716 ns | 16 | clean / clean | Lane-local selected-A experiment |
-| `row4_pipe3` | 74 cycles | 11,966 | -0.260 / -0.469 ns | 4 | clean / clean | Better setup WNS, worse electrical/antenna profile |
+| `row4` | 26 cycles | 14,514 | -5.831 / -372.767 ns | 319 / 0 | clean / clean | Baseline four-lane row MAC |
+| `row4_pipe` | 42 cycles | 15,026 | -1.901 / -45.687 ns | 178 / 0 | clean / clean | Product register stage |
+| `row4_pipe2` tuned | 58 cycles | 15,198 | -0.343 / -1.588 ns | 21 / 0 | clean / clean | Best row-family 100 MHz attempt |
+| `row4_pipe2_dupa` | 58 cycles | 15,198 | -0.314 / -1.716 ns | 16 / 0 | clean / clean | Lane-local selected-A experiment |
+| `row4_pipe3` | 74 cycles | 11,966 | -0.260 / -0.469 ns | 4 / 0 | clean / clean | Better setup WNS, worse electrical/antenna profile |
+| `systolic4x4` | 17 cycles | 23,911 | +0.886 / 0 ns | 0 / 0 | clean / clean | 100 MHz setup/hold closed; electrical/antenna cleanup remains |
 
 Selected lower-clock row4_pipe2 runs also remain setup-negative: the documented
 11.0 ns / 90.9 MHz run reports WNS/TNS -0.172 / -0.238 ns with 4 setup
@@ -157,12 +158,13 @@ The double-buffered streaming NPU uses the same packet format as the tile core:
 C values on the output stream. It is single-clock and simulation-verified, but
 not a production NPU, CDC/multi-clock design, or ASIC-timing-optimized block.
 
-| Metric | Value |
+| Compute engine | Single-tile latency | Steady state | Input acceptance | Overlap |
+| --- | ---: | ---: | ---: | --- |
+| `row4_pipe2` | 156 cycles | 64 cycles/tile | 63 cycles/tile | yes |
+| `systolic4x4` | 115 cycles | 64 cycles/tile | 63 cycles/tile | yes |
+
+| Frequency estimate | Value |
 | --- | ---: |
-| Single-tile latency | 156 cycles |
-| Steady-state throughput | 64 cycles/tile |
-| Observed input acceptance | 63 cycles/tile |
-| Overlap observed | yes |
 | Estimated throughput at 90 MHz | 1.40625M tiles/s, 90M MAC/s |
 | Estimated throughput at 100 MHz | 1.5625M tiles/s, 100M MAC/s |
 
@@ -196,8 +198,11 @@ make sim
 make sim-axi-dma
 make sim-axis-stream
 make sim-axis-stream-npu
+make sim-systolic4x4
+make sim-axis-stream-npu-systolic4x4
 make synth
 make synth-row4-pipe2
+make synth-systolic4x4
 make asic-check
 ```
 
@@ -208,8 +213,10 @@ points.
 ## Limitations And Future Work
 
 - No tapeout claim and no signoff-clean claim.
-- 100 MHz remains an aggressive near-close exploration target, not a closed
-  implementation.
+- Systolic4x4 closes setup and hold at 100 MHz; the row4-family 100 MHz
+  experiments remain timing-open.
+- Max-slew, max-capacitance, and antenna cleanup still prevent a full
+  signoff-clean claim.
 - OpenLane results are local ASIC-style flow results, not shuttle/fab results.
 - Scratchpads/result buffers are register-based RTL, not SRAM macros.
 - Full AXI DMA is single-beat only; no bursts or multiple outstanding requests.
